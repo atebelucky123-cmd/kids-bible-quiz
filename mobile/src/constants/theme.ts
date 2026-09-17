@@ -51,6 +51,18 @@ export const Fonts = Platform.select({
   },
 });
 
+// Design tokens from the client-approved UI design ("Cobalt Playground"),
+// not the light/dark ThemedText system above — these are the fixed brand
+// colors used across every screen regardless of system theme.
+export const Brand = {
+  cobalt: '#3a4ca0',
+  lime: '#c6f24e',
+  orange: '#f8981d',
+  ink: '#14172e',
+  white: '#ffffff',
+  surface: '#f6f5f1',
+} as const;
+
 export const Spacing = {
   half: 2,
   one: 4,

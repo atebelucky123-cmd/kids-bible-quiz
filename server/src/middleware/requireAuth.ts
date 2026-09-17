@@ -12,7 +12,13 @@ declare global {
 }
 
 export function requireAuth(req: Request, _res: Response, next: NextFunction) {
-  const token = req.cookies?.[sessionCookie.name];
+  // Web admin dashboard: httpOnly cookie. Mobile app: Authorization header,
+  // since cookie persistence isn't reliable enough across iOS/Android to
+  // depend on alone (see Phase 5 notes).
+  const bearer = req.headers.authorization?.startsWith("Bearer ")
+    ? req.headers.authorization.slice("Bearer ".length)
+    : undefined;
+  const token = bearer ?? req.cookies?.[sessionCookie.name];
   if (!token) {
     return next(new AppError("You need to be logged in", 401, "UNAUTHENTICATED"));
   }
