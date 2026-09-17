@@ -130,6 +130,28 @@ export type AttemptsSummary = {
   };
 };
 
+export type PublicQuestion = {
+  id: number;
+  questionText: string;
+  optionA: string;
+  optionB: string;
+  optionC: string;
+  optionD: string;
+};
+
+export type QuizAttemptState = {
+  attemptId: number;
+  status: 'IN_PROGRESS' | 'FINISHED';
+  currentQuestionIndex: number;
+  totalQuestions: number;
+  timeLimitSeconds: number;
+};
+
+export type CurrentQuestionResponse = QuizAttemptState & {
+  secondsRemaining: number;
+  question: PublicQuestion;
+};
+
 export const api = {
   async register(input: RegisterInput) {
     const data = await request<{ user: PublicUser; token: string }>('/api/auth/register', {
@@ -164,5 +186,16 @@ export const api = {
 
   async getAttemptsSummary() {
     return request<AttemptsSummary>('/api/me/attempts');
+  },
+
+  async startQuiz(restart = false) {
+    return request<QuizAttemptState>('/api/quiz/start', {
+      method: 'POST',
+      body: JSON.stringify({ restart }),
+    });
+  },
+
+  async getQuizQuestion(attemptId: number) {
+    return request<CurrentQuestionResponse>(`/api/quiz/${attemptId}`);
   },
 };

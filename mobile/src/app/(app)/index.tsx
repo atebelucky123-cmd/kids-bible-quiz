@@ -1,4 +1,6 @@
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { router } from 'expo-router';
+import { useState } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/button';
 import { LastResultCard } from '@/components/ui/last-result-card';
@@ -7,20 +9,28 @@ import { StatCard } from '@/components/ui/stat-card';
 import { Brand, Spacing } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
 import { useAttemptsSummary } from '@/hooks/use-attempts-summary';
-
-// The quiz-taking screens are built in Phase 7 (Quiz Engine). Until then,
-// Start/Continue Quiz just confirms the right button/state renders for
-// real attempt data — this phase's own test scenarios only require the
-// decision to be correct, not the destination screen to exist yet.
-function goToQuiz() {
-  Alert.alert('Coming soon', 'Quiz questions are wired up in the next phase.');
-}
+import { api, ApiError } from '@/lib/api';
 
 export default function HomeScreen() {
   const { user, logout } = useAuth();
   const { state, reload } = useAttemptsSummary();
+  const [starting, setStarting] = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
 
   if (!user) return null;
+
+  async function handleStart(restart: boolean) {
+    setStartError(null);
+    setStarting(true);
+    try {
+      const attempt = await api.startQuiz(restart);
+      router.push({ pathname: '/quiz/[attemptId]', params: { attemptId: String(attempt.attemptId) } });
+    } catch (err) {
+      setStartError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.');
+    } finally {
+      setStarting(false);
+    }
+  }
 
   if (state.status === 'loading') {
     return (
@@ -69,12 +79,25 @@ export default function HomeScreen() {
           <View style={styles.actions}>
             {inProgressAttempt ? (
               <>
-                <Button title="Continue Quiz" variant="secondary" onPress={goToQuiz} />
-                <Button title="Start a New Quiz" variant="outline" onPress={goToQuiz} />
+                <Button
+                  title="Continue Quiz"
+                  variant="secondary"
+                  loading={starting}
+                  onPress={() =>
+                    router.push({ pathname: '/quiz/[attemptId]', params: { attemptId: String(inProgressAttempt.id) } })
+                  }
+                />
+                <Button
+                  title="Start a New Quiz"
+                  variant="outline"
+                  loading={starting}
+                  onPress={() => handleStart(true)}
+                />
               </>
             ) : (
-              <Button title="Start Quiz" variant="primary" onPress={goToQuiz} />
+              <Button title="Start Quiz" variant="primary" loading={starting} onPress={() => handleStart(false)} />
             )}
+            {startError ? <Text style={styles.errorText}>{startError}</Text> : null}
           </View>
 
           <View style={styles.statsRow}>
