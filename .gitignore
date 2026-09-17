@@ -1,0 +1,32 @@
+node_modules/
+.env
+.env.local
+.expo/
+dist/
+build/
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*
+.vscode/
+.idea/
+
+# Prisma
+server/prisma/migrations/dev.db
+
+# Expo
+mobile/.expo/
+mobile/dist/
+mobile/web-build/
+mobile/*.jks
+mobile/*.p8
+mobile/*.p12
+mobile/*.key
+mobile/*.mobileprovision
+mobile/*.orig.*
+
+# Admin (Vite)
+admin/dist/
+
+# OS / editor scratch
+.ui_design_review/

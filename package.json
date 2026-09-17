@@ -1,0 +1,10 @@
+{
+  "name": "kids-bible-quiz",
+  "private": true,
+  "description": "Monorepo root for the Kids Bible Quiz project (mobile, server, admin). See README.md for setup.",
+  "scripts": {
+    "server:dev": "npm --prefix server run dev",
+    "admin:dev": "npm --prefix admin run dev",
+    "mobile:dev": "npm --prefix mobile run start"
+  }
+}
