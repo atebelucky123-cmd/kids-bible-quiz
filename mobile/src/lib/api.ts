@@ -109,6 +109,27 @@ export type RegisterInput = {
 
 export type LoginInput = { firstName: string; password: string };
 
+export type QuizAttemptSummary = {
+  id: number;
+  status: 'IN_PROGRESS' | 'FINISHED';
+  score: number;
+  totalQuestions: number;
+  percentage: number | null;
+  currentQuestionIndex: number;
+  startedAt: string;
+  completedAt: string | null;
+};
+
+export type AttemptsSummary = {
+  attempts: QuizAttemptSummary[];
+  inProgressAttempt: QuizAttemptSummary | null;
+  stats: {
+    quizzesCompleted: number;
+    starsEarned: number;
+    lastResult: QuizAttemptSummary | null;
+  };
+};
+
 export const api = {
   async register(input: RegisterInput) {
     const data = await request<{ user: PublicUser; token: string }>('/api/auth/register', {
@@ -139,5 +160,9 @@ export const api = {
   async me() {
     const data = await request<{ user: PublicUser }>('/api/auth/me');
     return data.user;
+  },
+
+  async getAttemptsSummary() {
+    return request<AttemptsSummary>('/api/me/attempts');
   },
 };
