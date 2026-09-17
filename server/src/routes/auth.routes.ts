@@ -1,6 +1,12 @@
 import { Router } from "express";
+import { validate } from "../middleware/validate";
+import { requireAuth } from "../middleware/requireAuth";
+import { registerSchema, loginSchema } from "../validators/auth.validators";
+import { register, login, logout, me } from "../controllers/auth.controller";
 
-// Endpoints (register, login, logout, me) are implemented in Phase 4 —
-// Authentication & User Registration. Mounted now so the route structure
-// and prefix (/api/auth) are settled before that phase adds handlers.
 export const authRouter = Router();
+
+authRouter.post("/register", validate({ body: registerSchema }), register);
+authRouter.post("/login", validate({ body: loginSchema }), login);
+authRouter.post("/logout", logout);
+authRouter.get("/me", requireAuth, me);
