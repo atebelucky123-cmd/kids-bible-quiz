@@ -1,4 +1,5 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { router } from 'expo-router';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Brand } from '@/constants/theme';
 import type { QuizAttemptSummary } from '@/lib/api';
 
@@ -8,13 +9,17 @@ export function LastResultCard({ result }: { result: QuizAttemptSummary }) {
   const percentage = Math.round(result.percentage ?? (result.score / result.totalQuestions) * 100);
 
   return (
-    <View style={styles.card}>
+    <Pressable
+      accessibilityRole="button"
+      onPress={() => router.push({ pathname: '/quiz/result/[attemptId]', params: { attemptId: String(result.id) } })}
+      style={styles.card}>
       <Text style={styles.title}>Last Result</Text>
       <Text style={styles.score}>
         {result.score} of {result.totalQuestions} correct
       </Text>
       <Text style={styles.percentage}>{percentage}%</Text>
-    </View>
+      <Text style={styles.link}>View full result</Text>
+    </Pressable>
   );
 }
 
@@ -30,4 +35,5 @@ const styles = StyleSheet.create({
   title: { fontSize: 12, fontWeight: '800', color: Brand.ink, letterSpacing: 1, textTransform: 'uppercase' },
   score: { fontSize: 16, fontWeight: '600', color: Brand.ink },
   percentage: { fontSize: 24, fontWeight: '800', color: Brand.cobalt },
+  link: { fontSize: 13, color: Brand.cobalt, fontWeight: '600', marginTop: 4 },
 });
