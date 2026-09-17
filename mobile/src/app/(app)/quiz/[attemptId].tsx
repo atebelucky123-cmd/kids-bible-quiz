@@ -1,10 +1,12 @@
+import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/button';
 import { Timer } from '@/components/ui/timer';
 import { Brand, Spacing } from '@/constants/theme';
+import { useCountdown } from '@/hooks/use-countdown';
 import { useCurrentQuestion } from '@/hooks/use-current-question';
 
 const OPTION_KEYS = ['A', 'B', 'C', 'D'] as const;
@@ -17,9 +19,10 @@ export default function QuizScreen() {
   const { attemptId } = useLocalSearchParams<{ attemptId: string }>();
   const { state, reload } = useCurrentQuestion(Number(attemptId));
   const [selected, setSelected] = useState<(typeof OPTION_KEYS)[number] | null>(null);
-  const [expired, setExpired] = useState(false);
-
-  const handleExpire = useCallback(() => setExpired(true), []);
+  // Called unconditionally (rules of hooks) with a harmless 0 while the
+  // question hasn't loaded yet — the loading/error branches below never
+  // render anything that reads `remaining`.
+  const remaining = useCountdown(state.status === 'ready' ? state.data.secondsRemaining : 0);
 
   if (state.status === 'loading') {
     return (
@@ -45,7 +48,8 @@ export default function QuizScreen() {
     );
   }
 
-  const { question, currentQuestionIndex, totalQuestions, secondsRemaining } = state.data;
+  const { question, currentQuestionIndex, totalQuestions } = state.data;
+  const expired = remaining <= 0;
   const options: Record<(typeof OPTION_KEYS)[number], string> = {
     A: question.optionA,
     B: question.optionB,
@@ -57,15 +61,19 @@ export default function QuizScreen() {
     <View style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          <Text style={styles.link} onPress={() => router.replace('/')}>
-            ← Home
-          </Text>
+          <Pressable
+            accessibilityLabel="Back to Home"
+            hitSlop={10}
+            onPress={() => router.replace('/')}
+            style={styles.homeButton}>
+            <Ionicons name="home" size={24} color={Brand.cobalt} />
+          </Pressable>
 
           <Text style={styles.counter}>
             Question {currentQuestionIndex + 1} of {totalQuestions}
           </Text>
 
-          <Timer secondsRemaining={secondsRemaining} onExpire={handleExpire} />
+          <Timer remaining={remaining} />
 
           <Text style={styles.questionText}>{question.questionText}</Text>
 
@@ -105,6 +113,7 @@ const styles = StyleSheet.create({
   errorText: { fontSize: 15, color: Brand.ink, textAlign: 'center' },
   content: { padding: 24, gap: Spacing.four },
   link: { fontSize: 14, color: Brand.cobalt, fontWeight: '600' },
+  homeButton: { alignSelf: 'flex-start' },
   counter: { fontSize: 14, fontWeight: '700', color: Brand.ink, textAlign: 'center' },
   questionText: { fontSize: 22, fontWeight: '800', color: Brand.ink, textAlign: 'center' },
   options: { gap: 12 },

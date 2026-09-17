@@ -1,45 +1,20 @@
-import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Brand } from '@/constants/theme';
 
-// The server's secondsRemaining (computed from a server-recorded
-// timestamp, spec Section 12) is the source of truth — this just ticks
-// it down visually between fetches rather than trusting a local clock
-// for real timing.
-export function Timer({ secondsRemaining, onExpire }: { secondsRemaining: number; onExpire?: () => void }) {
-  const [remaining, setRemaining] = useState(secondsRemaining);
-  const expiredRef = useRef(false);
-
-  useEffect(() => {
-    setRemaining(secondsRemaining);
-    expiredRef.current = false;
-  }, [secondsRemaining]);
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      setRemaining((current) => {
-        if (current <= 1) {
-          clearInterval(id);
-          if (!expiredRef.current) {
-            expiredRef.current = true;
-            onExpire?.();
-          }
-          return 0;
-        }
-        return current - 1;
-      });
-    }, 1000);
-    return () => clearInterval(id);
-  }, [secondsRemaining, onExpire]);
-
-  const isLow = remaining <= 10;
+// Purely presentational — the countdown itself lives in whichever screen
+// uses this (see useCountdown), so there's a single component owning that
+// state instead of a child ticking its own clock and reaching back up into
+// a parent's state from an effect.
+export function Timer({ remaining }: { remaining: number }) {
+  const isLow = remaining > 0 && remaining <= 10;
+  const expired = remaining <= 0;
   const minutes = Math.floor(remaining / 60);
   const seconds = remaining % 60;
   const label = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 
   return (
-    <View style={[styles.badge, isLow && styles.badgeLow]}>
-      <Text style={[styles.text, isLow && styles.textLow]}>{label}</Text>
+    <View style={[styles.badge, (isLow || expired) && styles.badgeLow]}>
+      <Text style={[styles.text, (isLow || expired) && styles.textLow]}>{label}</Text>
     </View>
   );
 }
