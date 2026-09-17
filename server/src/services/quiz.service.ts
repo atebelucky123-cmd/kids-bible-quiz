@@ -1,4 +1,4 @@
-import { AttemptStatus } from "@prisma/client";
+import { AnswerOption, AttemptStatus } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import { AppError } from "../utils/AppError";
 
@@ -37,6 +37,11 @@ function toPublicQuestion(question: {
     optionC: question.optionC,
     optionD: question.optionD,
   };
+}
+
+function secondsRemainingFor(attempt: { timeLimitSeconds: number; lastActivityAt: Date }) {
+  const elapsedSeconds = Math.floor((Date.now() - attempt.lastActivityAt.getTime()) / 1000);
+  return Math.max(0, attempt.timeLimitSeconds - elapsedSeconds);
 }
 
 function toAttemptSummary(attempt: {
@@ -138,12 +143,68 @@ export async function getCurrentQuestion(userId: number, attemptId: number) {
   // forward (created, or — from Phase 8 on — the last answer submitted).
   // This read-only endpoint never touches lastActivityAt itself, so
   // re-fetching the same question doesn't quietly reset its clock.
-  const elapsedSeconds = Math.floor((Date.now() - attempt.lastActivityAt.getTime()) / 1000);
-  const secondsRemaining = Math.max(0, attempt.timeLimitSeconds - elapsedSeconds);
-
   return {
     ...toAttemptSummary(attempt),
-    secondsRemaining,
+    secondsRemaining: secondsRemainingFor(attempt),
     question: toPublicQuestion(question),
+  };
+}
+
+const CORRECT_FEEDBACK = "Well done!";
+// Verbatim client wording (spec Section 13) — do not reword.
+const WRONG_FEEDBACK = "Whoops! That is the wrong answer, let's try again.";
+
+export async function submitAnswer(userId: number, attemptId: number, selectedOption: AnswerOption) {
+  const attempt = await prisma.quizAttempt.findUnique({ where: { id: attemptId } });
+
+  if (!attempt || attempt.userId !== userId) {
+    throw new AppError("Quiz attempt not found", 404, "NOT_FOUND");
+  }
+  if (attempt.status !== "IN_PROGRESS") {
+    throw new AppError("This quiz has already finished", 409, "ATTEMPT_FINISHED");
+  }
+  if (attempt.currentQuestionIndex >= attempt.questionIds.length) {
+    throw new AppError("This quiz has no more questions", 409, "ATTEMPT_COMPLETE");
+  }
+
+  const questionId = attempt.questionIds[attempt.currentQuestionIndex];
+  const question = await prisma.question.findUnique({ where: { id: questionId } });
+  if (!question) {
+    throw new AppError("That question is no longer available", 500, "QUESTION_MISSING");
+  }
+
+  // The server is the only thing that ever compares against
+  // correctOption — the client only ever sends which letter it picked
+  // (spec Sections 14 & 20: never trust a client-supplied correctness or
+  // score).
+  const isCorrect = selectedOption === question.correctOption;
+
+  await prisma.answer.create({
+    data: { attemptId, questionId, selectedOption, isCorrect },
+  });
+
+  // Wrong answers keep the student on the same question — unlimited
+  // retries, per the spec's provisional reading of the client's notes
+  // (development plan Appendix A, "wrong-answer retry limit"). Either way,
+  // touching the row bumps lastActivityAt (@updatedAt), giving a fresh
+  // timer window for the retry rather than letting it keep counting down
+  // from the original attempt at this question.
+  const updated = await prisma.quizAttempt.update({
+    where: { id: attemptId },
+    data: isCorrect
+      ? { score: { increment: 1 }, currentQuestionIndex: { increment: 1 } }
+      : { lastActivityAt: new Date() },
+  });
+
+  const isQuizComplete = updated.currentQuestionIndex >= updated.questionIds.length;
+
+  return {
+    correct: isCorrect,
+    message: isCorrect ? CORRECT_FEEDBACK : WRONG_FEEDBACK,
+    attempt: toAttemptSummary(updated),
+    isQuizComplete,
+    // Once every question is answered there's no "current question" left
+    // to time — completion/scoring is Phase 9's endpoint, not this one.
+    secondsRemaining: isQuizComplete ? null : secondsRemainingFor(updated),
   };
 }

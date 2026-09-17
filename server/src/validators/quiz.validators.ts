@@ -9,3 +9,7 @@ export const startQuizSchema = z.object({
 export const attemptParamsSchema = z.object({
   attemptId: z.coerce.number().int().positive(),
 });
+
+export const submitAnswerSchema = z.object({
+  selectedOption: z.enum(["A", "B", "C", "D"]),
+});

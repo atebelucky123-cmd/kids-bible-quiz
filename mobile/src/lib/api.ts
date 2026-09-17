@@ -152,6 +152,16 @@ export type CurrentQuestionResponse = QuizAttemptState & {
   question: PublicQuestion;
 };
 
+export type AnswerOption = 'A' | 'B' | 'C' | 'D';
+
+export type AnswerResult = {
+  correct: boolean;
+  message: string;
+  attempt: QuizAttemptState;
+  isQuizComplete: boolean;
+  secondsRemaining: number | null;
+};
+
 export const api = {
   async register(input: RegisterInput) {
     const data = await request<{ user: PublicUser; token: string }>('/api/auth/register', {
@@ -197,5 +207,12 @@ export const api = {
 
   async getQuizQuestion(attemptId: number) {
     return request<CurrentQuestionResponse>(`/api/quiz/${attemptId}`);
+  },
+
+  async submitAnswer(attemptId: number, selectedOption: AnswerOption) {
+    return request<AnswerResult>(`/api/quiz/${attemptId}/answer`, {
+      method: 'POST',
+      body: JSON.stringify({ selectedOption }),
+    });
   },
 };

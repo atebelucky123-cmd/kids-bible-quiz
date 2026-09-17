@@ -3,7 +3,7 @@ import { api, ApiError, type CurrentQuestionResponse } from '@/lib/api';
 
 type State =
   | { status: 'loading' }
-  | { status: 'error'; message: string }
+  | { status: 'error'; message: string; code: string }
   | { status: 'ready'; data: CurrentQuestionResponse };
 
 export function useCurrentQuestion(attemptId: number) {
@@ -18,6 +18,7 @@ export function useCurrentQuestion(attemptId: number) {
       setState({
         status: 'error',
         message: err instanceof ApiError ? err.message : 'Something went wrong. Please try again.',
+        code: err instanceof ApiError ? err.code : 'UNKNOWN_ERROR',
       });
     }
   }, [attemptId]);
