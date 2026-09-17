@@ -34,7 +34,12 @@ export default function ResultScreen() {
     setStartError(null);
     setStarting(true);
     try {
-      const attempt = await api.startQuiz(false);
+      // Always restart: this is the Result screen for a quiz that's
+      // already finished, so if some other stray in-progress attempt
+      // exists (e.g. an old one abandoned by timing out rather than via
+      // "Start a New Quiz"), "Play Again" must still get a genuinely new
+      // quiz, not silently resume that stale one.
+      const attempt = await api.startQuiz(true);
       router.replace({ pathname: '/quiz/[attemptId]', params: { attemptId: String(attempt.attemptId) } });
     } catch (err) {
       setStartError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.');

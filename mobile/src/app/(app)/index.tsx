@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/button';
 import { LastResultCard } from '@/components/ui/last-result-card';
 import { Mascot } from '@/components/ui/mascot';
+import { QuizHistoryCard } from '@/components/ui/quiz-history-card';
 import { StatCard } from '@/components/ui/stat-card';
 import { Brand, Spacing } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
@@ -116,6 +117,8 @@ export default function HomeScreen() {
           </View>
 
           {stats.lastResult ? <LastResultCard result={stats.lastResult} /> : null}
+
+          <QuizHistoryCard />
 
           <Text style={styles.logoutLink} onPress={logout}>
             Log Out
