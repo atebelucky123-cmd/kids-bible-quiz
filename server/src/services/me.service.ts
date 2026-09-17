@@ -1,4 +1,5 @@
 import { prisma } from "../lib/prisma";
+import { secondsRemainingFor } from "./quiz.service";
 
 // One star per correct answer, per the client's "Well done + star" feedback
 // (spec Section 13) — so cumulative stars earned is just the sum of scores
@@ -14,12 +15,24 @@ export async function getAttemptsSummary(userId: number) {
       totalQuestions: true,
       percentage: true,
       currentQuestionIndex: true,
+      timeLimitSeconds: true,
+      lastActivityAt: true,
       startedAt: true,
       completedAt: true,
     },
   });
 
-  const inProgressAttempt = attempts.find((attempt) => attempt.status === "IN_PROGRESS") ?? null;
+  const inProgressRow = attempts.find((attempt) => attempt.status === "IN_PROGRESS") ?? null;
+  // The client's own timer stub (development plan Appendix A) leaves what
+  // happens on expiry undecided, but the Home screen still needs to know
+  // whether resuming is actually possible — the current question can't be
+  // answered once its timer has run out, so Continue Quiz would just be a
+  // dead end. secondsRemaining lets the Home screen fall back to
+  // Start-a-New-Quiz-only in that case, per feedback from on-device testing.
+  const inProgressAttempt = inProgressRow
+    ? { ...inProgressRow, secondsRemaining: secondsRemainingFor(inProgressRow) }
+    : null;
+
   const finishedAttempts = attempts.filter(
     (attempt): attempt is typeof attempt & { completedAt: Date } =>
       attempt.status === "FINISHED" && attempt.completedAt !== null

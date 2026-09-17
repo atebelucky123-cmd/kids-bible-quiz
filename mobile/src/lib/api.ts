@@ -122,7 +122,10 @@ export type QuizAttemptSummary = {
 
 export type AttemptsSummary = {
   attempts: QuizAttemptSummary[];
-  inProgressAttempt: QuizAttemptSummary | null;
+  // secondsRemaining reflects whether the in-progress attempt's current
+  // question can still be answered — Continue Quiz is a dead end once it
+  // hits 0, since there's no way to submit an answer to an expired question.
+  inProgressAttempt: (QuizAttemptSummary & { secondsRemaining: number }) | null;
   stats: {
     quizzesCompleted: number;
     starsEarned: number;
@@ -159,6 +162,7 @@ export type AnswerResult = {
   message: string;
   attempt: QuizAttemptState;
   isQuizComplete: boolean;
+  score: number;
   secondsRemaining: number | null;
 };
 

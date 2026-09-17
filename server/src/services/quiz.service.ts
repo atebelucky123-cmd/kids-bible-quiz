@@ -39,7 +39,7 @@ function toPublicQuestion(question: {
   };
 }
 
-function secondsRemainingFor(attempt: { timeLimitSeconds: number; lastActivityAt: Date }) {
+export function secondsRemainingFor(attempt: { timeLimitSeconds: number; lastActivityAt: Date }) {
   const elapsedSeconds = Math.floor((Date.now() - attempt.lastActivityAt.getTime()) / 1000);
   return Math.max(0, attempt.timeLimitSeconds - elapsedSeconds);
 }
@@ -189,22 +189,43 @@ export async function submitAnswer(userId: number, attemptId: number, selectedOp
   // touching the row bumps lastActivityAt (@updatedAt), giving a fresh
   // timer window for the retry rather than letting it keep counting down
   // from the original attempt at this question.
+  const newScore = isCorrect ? attempt.score + 1 : attempt.score;
+  const newIndex = isCorrect ? attempt.currentQuestionIndex + 1 : attempt.currentQuestionIndex;
+  const isQuizComplete = newIndex >= attempt.questionIds.length;
+
+  // Finalizing here (rather than waiting for a separate Phase 9 "complete"
+  // call) matters even before the real result screen exists: without it,
+  // a fully-answered attempt stayed IN_PROGRESS forever with an
+  // out-of-range currentQuestionIndex, which the Home screen (Phase 6)
+  // misread as a resumable quiz — showing "Question 10 of 9" and a
+  // Continue Quiz button for a run that was already over, and leaving the
+  // real score out of stats entirely. Computed from newScore, not a
+  // second read of the row, since Prisma's increment operator can't be
+  // referenced within the same write to derive a percentage.
   const updated = await prisma.quizAttempt.update({
     where: { id: attemptId },
     data: isCorrect
-      ? { score: { increment: 1 }, currentQuestionIndex: { increment: 1 } }
+      ? {
+          score: newScore,
+          currentQuestionIndex: newIndex,
+          ...(isQuizComplete && {
+            status: "FINISHED" as const,
+            completedAt: new Date(),
+            percentage: (newScore / attempt.totalQuestions) * 100,
+          }),
+        }
       : { lastActivityAt: new Date() },
   });
-
-  const isQuizComplete = updated.currentQuestionIndex >= updated.questionIds.length;
 
   return {
     correct: isCorrect,
     message: isCorrect ? CORRECT_FEEDBACK : WRONG_FEEDBACK,
     attempt: toAttemptSummary(updated),
     isQuizComplete,
+    score: updated.score,
     // Once every question is answered there's no "current question" left
-    // to time — completion/scoring is Phase 9's endpoint, not this one.
+    // to time — the real result screen (score, percentage, cheers audio)
+    // is Phase 9's job, not this endpoint's.
     secondsRemaining: isQuizComplete ? null : secondsRemainingFor(updated),
   };
 }

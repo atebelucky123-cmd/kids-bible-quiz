@@ -54,6 +54,11 @@ export default function HomeScreen() {
   }
 
   const { inProgressAttempt, stats } = state.summary;
+  // Resuming a question whose timer already ran out is a dead end — there's
+  // no way to submit an answer to it (Phase 7/8's expired-question guard),
+  // so Continue Quiz would just take the student to a frozen screen. Only
+  // offer starting fresh in that case.
+  const canContinue = !!inProgressAttempt && inProgressAttempt.secondsRemaining > 0;
 
   return (
     <View style={styles.container}>
@@ -68,8 +73,8 @@ export default function HomeScreen() {
           </View>
 
           {inProgressAttempt ? (
-            <View style={styles.savedCard}>
-              <Text style={styles.savedBadge}>SAVED</Text>
+            <View style={[styles.savedCard, !canContinue && styles.savedCardExpired]}>
+              <Text style={styles.savedBadge}>{canContinue ? 'SAVED' : "TIME'S UP"}</Text>
               <Text style={styles.savedText}>
                 Question {inProgressAttempt.currentQuestionIndex + 1} of {inProgressAttempt.totalQuestions}
               </Text>
@@ -79,17 +84,22 @@ export default function HomeScreen() {
           <View style={styles.actions}>
             {inProgressAttempt ? (
               <>
-                <Button
-                  title="Continue Quiz"
-                  variant="secondary"
-                  loading={starting}
-                  onPress={() =>
-                    router.push({ pathname: '/quiz/[attemptId]', params: { attemptId: String(inProgressAttempt.id) } })
-                  }
-                />
+                {canContinue ? (
+                  <Button
+                    title="Continue Quiz"
+                    variant="secondary"
+                    loading={starting}
+                    onPress={() =>
+                      router.push({
+                        pathname: '/quiz/[attemptId]',
+                        params: { attemptId: String(inProgressAttempt.id) },
+                      })
+                    }
+                  />
+                ) : null}
                 <Button
                   title="Start a New Quiz"
-                  variant="outline"
+                  variant={canContinue ? 'outline' : 'primary'}
                   loading={starting}
                   onPress={() => handleStart(true)}
                 />
@@ -133,6 +143,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
+  savedCardExpired: { backgroundColor: '#ffe1c9' },
   savedBadge: { fontSize: 12, fontWeight: '800', color: Brand.ink, letterSpacing: 1 },
   savedText: { fontSize: 15, fontWeight: '600', color: Brand.ink },
   actions: { gap: 14 },

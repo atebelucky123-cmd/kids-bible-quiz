@@ -26,6 +26,11 @@ export default function QuizScreen() {
   const [wrongFeedback, setWrongFeedback] = useState(false);
   const [showCorrectOverlay, setShowCorrectOverlay] = useState(false);
   const [quizComplete, setQuizComplete] = useState(false);
+  // Only known when we just completed it in this session (the answer
+  // response carries the final score); reopening an already-finished
+  // attempt via GET doesn't have this, so the stub below falls back to a
+  // generic message in that case.
+  const [finalScore, setFinalScore] = useState<{ score: number; totalQuestions: number } | null>(null);
   // Starts from the server's GET value and gets overridden directly after
   // a wrong-answer submission (which resets the retry window server-side)
   // — see handleSelect below.
@@ -51,6 +56,7 @@ export default function QuizScreen() {
     try {
       const result = await api.submitAnswer(Number(attemptId), key);
       if (result.isQuizComplete) {
+        setFinalScore({ score: result.score, totalQuestions: result.attempt.totalQuestions });
         setQuizComplete(true);
       } else if (result.correct) {
         setShowCorrectOverlay(true);
@@ -78,7 +84,14 @@ export default function QuizScreen() {
         <SafeAreaView style={styles.centered}>
           <Mascot pose="star" size={140} />
           <Text style={styles.title}>All done!</Text>
-          <Text style={styles.errorText}>Your results screen is wired up in the next phase.</Text>
+          {finalScore ? (
+            <Text style={styles.errorText}>
+              You got {finalScore.score} of {finalScore.totalQuestions} correct. A proper results screen with your
+              percentage is wired up in the next phase.
+            </Text>
+          ) : (
+            <Text style={styles.errorText}>Your results screen is wired up in the next phase.</Text>
+          )}
           <Button title="Back to Home" variant="primary" onPress={() => router.replace('/')} />
         </SafeAreaView>
       </View>
