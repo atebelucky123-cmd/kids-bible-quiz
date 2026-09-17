@@ -166,6 +166,17 @@ export type AnswerResult = {
   secondsRemaining: number | null;
 };
 
+export type QuizResult = {
+  attemptId: number;
+  score: number;
+  totalQuestions: number;
+  percentage: number;
+  completedAt: string;
+  // Decided server-side against the raw (unrounded) percentage — never
+  // recompute this threshold from a rounded display value on the client.
+  playCheers: boolean;
+};
+
 export const api = {
   async register(input: RegisterInput) {
     const data = await request<{ user: PublicUser; token: string }>('/api/auth/register', {
@@ -218,5 +229,9 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ selectedOption }),
     });
+  },
+
+  async getQuizResult(attemptId: number) {
+    return request<QuizResult>(`/api/quiz/${attemptId}/result`);
   },
 };

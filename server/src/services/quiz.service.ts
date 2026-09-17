@@ -229,3 +229,36 @@ export async function submitAnswer(userId: number, attemptId: number, selectedOp
     secondsRemaining: isQuizComplete ? null : secondsRemainingFor(updated),
   };
 }
+
+// Client's notes, taken literally: "Grades above 70 gets a cheers
+// sounds." Exactly 70% does not qualify (spec Section 15) — the boundary
+// is checked against the stored, unrounded percentage, never a display
+// value, and decided here once so every caller gets the same answer
+// rather than each re-implementing the ">70" comparison itself.
+const CHEERS_THRESHOLD_PERCENT = 70;
+
+// There's no separate POST /complete in this API: Phase 8's submitAnswer
+// already finalizes the attempt (status, completedAt, percentage) the
+// moment its last question is answered, since a quiz can only ever reach
+// its last question via a correct answer (wrong answers never advance).
+// A standalone "complete" call would have nothing left to do, so this
+// phase only adds the read side — fetching the result once it exists.
+export async function getResult(userId: number, attemptId: number) {
+  const attempt = await prisma.quizAttempt.findUnique({ where: { id: attemptId } });
+
+  if (!attempt || attempt.userId !== userId) {
+    throw new AppError("Quiz attempt not found", 404, "NOT_FOUND");
+  }
+  if (attempt.status !== "FINISHED" || attempt.percentage === null || !attempt.completedAt) {
+    throw new AppError("This quiz isn't finished yet", 409, "ATTEMPT_NOT_FINISHED");
+  }
+
+  return {
+    attemptId: attempt.id,
+    score: attempt.score,
+    totalQuestions: attempt.totalQuestions,
+    percentage: attempt.percentage,
+    completedAt: attempt.completedAt,
+    playCheers: attempt.percentage > CHEERS_THRESHOLD_PERCENT,
+  };
+}

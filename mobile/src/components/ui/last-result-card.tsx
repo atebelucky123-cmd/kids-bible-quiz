@@ -3,7 +3,9 @@ import { Brand } from '@/constants/theme';
 import type { QuizAttemptSummary } from '@/lib/api';
 
 export function LastResultCard({ result }: { result: QuizAttemptSummary }) {
-  const percentage = result.percentage ?? Math.round((result.score / result.totalQuestions) * 100);
+  // Round only for display — the 70%-cheers decision itself is always
+  // made server-side against the raw percentage (spec Section 15).
+  const percentage = Math.round(result.percentage ?? (result.score / result.totalQuestions) * 100);
 
   return (
     <View style={styles.card}>

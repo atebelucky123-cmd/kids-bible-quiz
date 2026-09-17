@@ -5,7 +5,6 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CorrectAnswerOverlay, WrongAnswerBanner } from '@/components/ui/answer-feedback';
 import { Button } from '@/components/ui/button';
-import { Mascot } from '@/components/ui/mascot';
 import { Timer } from '@/components/ui/timer';
 import { Brand, Spacing } from '@/constants/theme';
 import { useCountdown } from '@/hooks/use-countdown';
@@ -14,9 +13,10 @@ import { api, ApiError, type AnswerOption } from '@/lib/api';
 
 const OPTION_KEYS: AnswerOption[] = ['A', 'B', 'C', 'D'];
 
-// Scoring, the completed-quiz result screen, and the 70%-cheers audio are
-// Phase 9 scope. Once every question here has been answered, this screen
-// just shows a plain "all done" stub rather than a real result.
+function goToResult(attemptId: string) {
+  router.replace({ pathname: '/quiz/result/[attemptId]', params: { attemptId } });
+}
+
 export default function QuizScreen() {
   const { attemptId } = useLocalSearchParams<{ attemptId: string }>();
   const { state, reload } = useCurrentQuestion(Number(attemptId));
@@ -25,12 +25,6 @@ export default function QuizScreen() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [wrongFeedback, setWrongFeedback] = useState(false);
   const [showCorrectOverlay, setShowCorrectOverlay] = useState(false);
-  const [quizComplete, setQuizComplete] = useState(false);
-  // Only known when we just completed it in this session (the answer
-  // response carries the final score); reopening an already-finished
-  // attempt via GET doesn't have this, so the stub below falls back to a
-  // generic message in that case.
-  const [finalScore, setFinalScore] = useState<{ score: number; totalQuestions: number } | null>(null);
   // Starts from the server's GET value and gets overridden directly after
   // a wrong-answer submission (which resets the retry window server-side)
   // — see handleSelect below.
@@ -40,9 +34,12 @@ export default function QuizScreen() {
     if (state.status === 'ready') {
       setSecondsRemaining(state.data.secondsRemaining);
     } else if (state.status === 'error' && state.code === 'ATTEMPT_COMPLETE') {
-      setQuizComplete(true);
+      // Reopening the app after already finishing this attempt — the
+      // result already exists, so go straight to it instead of showing
+      // an error for a perfectly normal state.
+      goToResult(attemptId);
     }
-  }, [state]);
+  }, [state, attemptId]);
 
   const remaining = useCountdown(secondsRemaining);
   const expired = remaining <= 0;
@@ -56,8 +53,7 @@ export default function QuizScreen() {
     try {
       const result = await api.submitAnswer(Number(attemptId), key);
       if (result.isQuizComplete) {
-        setFinalScore({ score: result.score, totalQuestions: result.attempt.totalQuestions });
-        setQuizComplete(true);
+        goToResult(attemptId);
       } else if (result.correct) {
         setShowCorrectOverlay(true);
       } else {
@@ -76,26 +72,6 @@ export default function QuizScreen() {
     setShowCorrectOverlay(false);
     setSelected(null);
     reload();
-  }
-
-  if (quizComplete) {
-    return (
-      <View style={styles.container}>
-        <SafeAreaView style={styles.centered}>
-          <Mascot pose="star" size={140} />
-          <Text style={styles.title}>All done!</Text>
-          {finalScore ? (
-            <Text style={styles.errorText}>
-              You got {finalScore.score} of {finalScore.totalQuestions} correct. A proper results screen with your
-              percentage is wired up in the next phase.
-            </Text>
-          ) : (
-            <Text style={styles.errorText}>Your results screen is wired up in the next phase.</Text>
-          )}
-          <Button title="Back to Home" variant="primary" onPress={() => router.replace('/')} />
-        </SafeAreaView>
-      </View>
-    );
   }
 
   if (state.status === 'loading') {
@@ -190,7 +166,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Brand.surface },
   safeArea: { flex: 1 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16, padding: 24 },
-  title: { fontSize: 26, fontWeight: '800', color: Brand.ink },
   errorText: { fontSize: 15, color: Brand.ink, textAlign: 'center' },
   content: { padding: 24, gap: Spacing.four },
   link: { fontSize: 14, color: Brand.cobalt, fontWeight: '600' },
