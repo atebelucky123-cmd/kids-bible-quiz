@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { AssetPlaceholder } from '@/components/ui/asset-placeholder';
+import { Mascot } from '@/components/ui/mascot';
 import { Button } from '@/components/ui/button';
 import { Brand } from '@/constants/theme';
 
@@ -10,7 +10,7 @@ export default function WelcomeScreen() {
     <View style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.hero}>
-          <AssetPlaceholder label="Mascot Art" size={140} />
+          <Mascot pose="wave" size={150} />
           <Text style={styles.title}>Kids Bible Quiz</Text>
           <Text style={styles.tagline}>Bible questions, one step at a time.</Text>
         </View>

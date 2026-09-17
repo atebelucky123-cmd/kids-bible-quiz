@@ -1,8 +1,8 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Button } from '@/components/ui/button';
+import { FormScreen } from '@/components/ui/form-screen';
 import { TextField } from '@/components/ui/text-field';
 import { Brand } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
@@ -46,12 +46,19 @@ export default function RegisterStep2Screen() {
       setError('Please fill in your hobbies and pick a favourite colour and animal.');
       return;
     }
-    if (!passwordValid) {
-      setError('Password needs at least 6 letters and numbers (no symbols).');
+    if (!password || !confirmPassword) {
+      setError('Please enter your password twice.');
       return;
     }
-    if (!passwordsMatch) {
+    // Check the mismatch first — it's the more fundamental problem and the
+    // one most likely to actually be wrong; reporting "too short" instead
+    // when two DIFFERENT short values were entered hid the real issue.
+    if (password !== confirmPassword) {
       setError("Passwords don't match yet.");
+      return;
+    }
+    if (!passwordValid) {
+      setError('Password needs at least 6 letters and numbers (no symbols).');
       return;
     }
 
@@ -82,10 +89,8 @@ export default function RegisterStep2Screen() {
   }
 
   return (
-    <View style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ScrollView contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled">
-          <Text style={styles.title}>Your Favourites</Text>
+    <FormScreen backgroundColor={Brand.surface}>
+      <Text style={styles.title}>Your Favourites</Text>
 
           <Text style={styles.label}>Favourite Colour</Text>
           <View style={styles.row}>
@@ -132,29 +137,24 @@ export default function RegisterStep2Screen() {
             secureTextEntry
             autoCapitalize="none"
           />
-          {password.length > 0 && (
+          {password.length > 0 && confirmPassword.length > 0 && (
             <Text style={[styles.passwordHint, passwordsMatch && passwordValid && styles.passwordHintOk]}>
-              {passwordValid
-                ? passwordsMatch
+              {!passwordsMatch
+                ? "Passwords don't match yet."
+                : passwordValid
                   ? 'Both passwords match. Use letters and numbers.'
-                  : "Passwords don't match yet."
-                : 'Use at least 6 letters and numbers, no symbols.'}
+                  : 'Use at least 6 letters and numbers, no symbols.'}
             </Text>
           )}
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
           <Button title="Create My Account" variant="primary" onPress={handleSubmit} loading={submitting} />
-        </ScrollView>
-      </SafeAreaView>
-    </View>
+    </FormScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Brand.surface },
-  safeArea: { flex: 1 },
-  form: { padding: 24, gap: 16 },
   title: { fontSize: 28, fontWeight: '800', color: Brand.ink, marginBottom: 8 },
   label: {
     fontSize: 13,
