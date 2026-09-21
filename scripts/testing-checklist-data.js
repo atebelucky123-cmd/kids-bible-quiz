@@ -55,4 +55,21 @@ module.exports = [
       'session suppresses native dialogs, and there is no way to drive the physical mobile app from that same ' +
       'session), not known defects.',
   },
+  {
+    phase: 'Phase 12 — Security Hardening & Validation',
+    intro:
+      'Every item in the spec’s security checklist (Section 20) was actively tested against the running ' +
+      'server — not assumed from the code — with direct API requests: password hashing, both client- and ' +
+      'server-side registration/age validation, correct-answer non-exposure, rejection of fabricated ' +
+      'correctness/score fields, cross-student ownership checks, admin-route authorization (unauthenticated, ' +
+      'invalid token, and wrong-role cases), .env hygiene, and input sanitization against malformed JSON, ' +
+      'invalid enum values, and non-numeric IDs. One real (if dormant) issue was found and fixed: the CORS ' +
+      'fallback allowed any origin with credentials when CORS_ORIGIN was unset — now it falls back to the ' +
+      'same explicit dev origins .env.example documents instead. HTTPS in production is deferred to Phase 14 ' +
+      '(Render and Neon both provide it by default; not testable against localhost).',
+    items: [],
+    closing:
+      'None — every check in this phase is verifiable through direct API requests, all of which were run ' +
+      'and confirmed during implementation. No human, real browser, or physical device is needed here.',
+  },
 ];
