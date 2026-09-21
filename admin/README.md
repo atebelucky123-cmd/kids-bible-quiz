@@ -1,32 +1,38 @@
-# React + TypeScript + Vite
+# Kids Bible Quiz — Admin Dashboard
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React + TypeScript (Vite) web app for managing the question bank and reviewing
+student activity. See Phase 11 of `Kids_Bible_Quiz_Development_Plan.pdf` for
+the full design.
 
-Currently, two official plugins are available:
+## Setup
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+cp .env.example .env   # adjust VITE_API_URL if the API isn't on localhost:4000
+npm run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Requires the `server/` API to be running (`npm run dev --prefix ../server`)
+and at least one seeded admin account (`npm run seed:admin --prefix ../server`).
+
+## Pages
+
+- **Overview** — student/question/attempt counts, completion rate, and a
+  by-age-band breakdown of attempts (a display-only grouping — questions
+  themselves keep a freeform `ageMin`/`ageMax`).
+- **Questions** — list, add, edit, deactivate, and delete questions. Deleting
+  a question that already has recorded answers is blocked (deactivate it
+  instead) to preserve grading history.
+- **Students** — read-only. Never shows mobile numbers or password data.
+- **Attempts** — every quiz attempt, filterable by status and student name.
+- **Settings** — change the shared admin account's password. Not part of the
+  original 4-tab UI design; added because the seeded admin's placeholder
+  password is meant to be changed on first real use (see Appendix A of the
+  development plan).
+
+## Authentication
+
+Reuses the same `POST /api/auth/login` endpoint as the mobile app
+(first name + password) — the seeded account just has `role: ADMIN`. Session
+is an httpOnly cookie; unlike the mobile app, the browser can rely on cookies
+working consistently, so no token is stored client-side.

@@ -2,7 +2,7 @@ import { z } from "zod";
 
 // Client's notes: "Set password: Alpha numeric" — interpreted as
 // letters-and-digits only (no symbols), containing at least one of each.
-const passwordSchema = z
+export const passwordSchema = z
   .string()
   .min(6, "Password must be at least 6 characters")
   .max(72, "Password is too long") // bcrypt's own input limit
