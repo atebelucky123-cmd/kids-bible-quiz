@@ -6,5 +6,8 @@
     "server:dev": "npm --prefix server run dev",
     "admin:dev": "npm --prefix admin run dev",
     "mobile:dev": "npm --prefix mobile run start"
+  },
+  "devDependencies": {
+    "pdf-lib": "^1.17.1"
   }
 }
