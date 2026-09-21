@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { AssetPlaceholder } from '@/components/ui/asset-placeholder';
+import { AgeErrorIcon } from '@/components/ui/age-error-icon';
 import { Button } from '@/components/ui/button';
 import { Brand } from '@/constants/theme';
 
@@ -10,7 +10,7 @@ export default function AgeTooHighScreen() {
     <View style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.content}>
-          <AssetPlaceholder label="Smiley Emoji.svg" size={120} />
+          <AgeErrorIcon size={120} />
           {/* Wording is verbatim from the client's handwritten notes. */}
           <Text style={styles.title}>Oops, the age is too high</Text>
           <Text style={styles.body}>

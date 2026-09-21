@@ -1,15 +1,26 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { Animated, StyleSheet, Text, View } from 'react-native';
 import { Button } from '@/components/ui/button';
-import { Mascot } from '@/components/ui/mascot';
+import { StarIcon } from '@/components/ui/star-icon';
 import { Brand } from '@/constants/theme';
 
 // Client's exact required wording (spec Section 13): correct answers get
 // "Well done" with a star, full-screen, before moving on; wrong answers
 // get the "Whoops" message inline, staying on the same question.
 export function CorrectAnswerOverlay({ onNext }: { onNext: () => void }) {
+  // A light bounce-in for the star — enough to feel like a reward without
+  // being the "excessive animation" the spec cautions against.
+  const scale = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.spring(scale, { toValue: 1, friction: 4, tension: 60, useNativeDriver: true }).start();
+  }, [scale]);
+
   return (
     <View style={[StyleSheet.absoluteFill, styles.overlay]}>
-      <Mascot pose="star" size={140} />
+      <Animated.View style={{ transform: [{ scale }] }}>
+        <StarIcon size={140} />
+      </Animated.View>
       <Text style={styles.title}>Well done!</Text>
       <Button title="Next Question" variant="primary" onPress={onNext} />
     </View>
