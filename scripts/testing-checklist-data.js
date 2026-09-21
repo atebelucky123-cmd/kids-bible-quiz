@@ -72,4 +72,56 @@ module.exports = [
       'None — every check in this phase is verifiable through direct API requests, all of which were run ' +
       'and confirmed during implementation. No human, real browser, or physical device is needed here.',
   },
+  {
+    phase: 'Phase 13 — Integration & End-to-End Testing',
+    intro:
+      'The full scenario matrix (see TESTING.md at the repo root) was run against the live API — registration ' +
+      'and its age/duplicate-name/wrong-password edge cases, the complete quiz engine flow including the ' +
+      'wrong-answer retry, a real 9-question attempt played to 100%, the exact >70% cheers boundary tested at ' +
+      '65/70/75%, close-and-reopen persistence, and admin CRUD with unauthorized-access rejection. What a ' +
+      'scripted API session cannot confirm is whether those same guarantees hold when a person is actually ' +
+      'looking at the screen and holding the phone.',
+    items: [
+      {
+        title: 'Full student walkthrough on a real device.',
+        body:
+          'Register, land on Home, start a quiz, answer a question wrong then correctly, and reach the result ' +
+          'screen. The API responses for each step were verified directly, but rendering, navigation, and ' +
+          'wording on the actual screen were not.',
+      },
+      {
+        title: 'Timer expiry UX on-device.',
+        body:
+          'Let a question’s countdown reach 0 and confirm the "TIME’S UP" screen appears with only ' +
+          '"Start a New Quiz" offered — not "Continue Quiz" for an attempt whose current question can no ' +
+          'longer be answered. (Fixed and verified in an earlier session; re-check only if the timer code has ' +
+          'changed since.)',
+      },
+      {
+        title: 'Cheers/claps audio is actually audible.',
+        body:
+          'Complete a real quiz above 70% and confirm the cheers/claps sound plays through the device speaker; ' +
+          'complete one at or below 70% and confirm it stays silent. The >70% boundary logic itself was tested ' +
+          'precisely (65/70/75% synthetic attempts), but audio playback can only be confirmed on a real device.',
+      },
+      {
+        title: 'Close and reopen the physical app mid-quiz.',
+        body:
+          'Force-quit or background the app partway through a quiz, then reopen it and tap Continue Quiz. The ' +
+          'server-side persistence was confirmed via direct API calls simulating this, but the actual app needs ' +
+          'to be closed and reopened by hand to confirm the UI itself resumes correctly.',
+      },
+      {
+        title: 'Network loss mid-quiz.',
+        body:
+          'Turn off Wi-Fi on the phone while a quiz is in progress and confirm the "We lost the internet — ' +
+          'your quiz is saved" state appears, then confirm the quiz resumes cleanly once connectivity returns. ' +
+          'Cannot be simulated from this session.',
+      },
+    ],
+    closing:
+      'None architecturally — these are the physical-device counterparts to scenarios already confirmed at the ' +
+      'API level; nothing here is expected to fail unless a mobile-side regression has been introduced ' +
+      'separately.',
+  },
 ];
