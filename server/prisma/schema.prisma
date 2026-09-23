@@ -110,7 +110,14 @@ model Answer {
   answeredAt     DateTime     @default(now()) @map("answered_at")
 
   attempt  QuizAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
-  question Question    @relation(fields: [questionId], references: [id], onDelete: Restrict)
+  // NoAction, not Restrict: both block deletion identically for us (we
+  // never defer constraint checks), but Postgres raises RESTRICT
+  // violations as SQLSTATE 23001, which Prisma's error engine doesn't map
+  // to a known error code — deleteQuestion()'s P2003 catch (admin.service.ts)
+  // would silently fall through to a generic 500 instead of the intended
+  // "deactivate it instead" message. NoAction raises 23503, which Prisma
+  // does recognize as P2003.
+  question Question    @relation(fields: [questionId], references: [id], onDelete: NoAction)
 
   @@index([attemptId])
   @@index([questionId])
