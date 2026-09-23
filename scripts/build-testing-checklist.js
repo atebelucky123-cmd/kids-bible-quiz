@@ -141,6 +141,12 @@ async function main() {
     y -= 18;
   }
 
+  function drawGroupLabel(text) {
+    ensureSpace(22);
+    page.drawText(text.toUpperCase(), { x: MARGIN_L, y, size: 9.5, font: helvBold, color: ORANGE });
+    y -= 15;
+  }
+
   function drawChecklistItem(title, body) {
     const boxSize = 9;
     const textX = MARGIN_L + 18;
@@ -181,7 +187,14 @@ async function main() {
       drawParagraph(phase.intro);
       y -= 8;
     }
-    if (phase.items.length > 0) {
+    if (phase.groups) {
+      for (const group of phase.groups) {
+        drawGroupLabel(group.label);
+        for (const item of group.items) {
+          drawChecklistItem(item.title, item.body);
+        }
+      }
+    } else if (phase.items.length > 0) {
       for (const item of phase.items) {
         drawChecklistItem(item.title, item.body);
       }
