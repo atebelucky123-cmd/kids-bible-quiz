@@ -17,6 +17,12 @@ services:
         value: production
       - key: DATABASE_URL
         sync: false
+      # Neon's *direct* (non-pooled) connection string — used only for
+      # `prisma migrate deploy` during the build. See schema.prisma's
+      # datasource comment for why this has to be separate from
+      # DATABASE_URL.
+      - key: DIRECT_URL
+        sync: false
       - key: SESSION_SECRET
         sync: false
       - key: CORS_ORIGIN

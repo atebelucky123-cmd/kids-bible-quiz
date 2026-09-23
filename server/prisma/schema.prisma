@@ -6,8 +6,15 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  // The running app queries through DATABASE_URL (Neon's pooled connection
+  // in production — fine for ordinary queries). Prisma's own migration
+  // commands (migrate deploy, migrate dev) always use directUrl instead,
+  // since they need session-level advisory locks that a transaction-mode
+  // pooler like Neon's doesn't support. Locally, where there's no pooler,
+  // both env vars just point at the same database.
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 enum Role {
