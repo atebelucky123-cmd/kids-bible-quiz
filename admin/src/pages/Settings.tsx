@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { api, ApiError } from '../lib/api';
+import { PasswordInput } from '../components/PasswordInput';
 
 // Not part of the approved 4-tab UI design (Overview/Questions/Students/
 // Attempts) — added because development plan Appendix A promises the
@@ -49,33 +50,30 @@ export function Settings() {
       <form className="card" style={{ maxWidth: 420 }} onSubmit={handleSubmit}>
         <div className="field">
           <label htmlFor="currentPassword">Current password</label>
-          <input
+          <PasswordInput
             id="currentPassword"
-            type="password"
             value={currentPassword}
-            onChange={(e) => setCurrentPassword(e.target.value)}
+            onChange={setCurrentPassword}
             autoComplete="current-password"
             required
           />
         </div>
         <div className="field">
           <label htmlFor="newPassword">New password</label>
-          <input
+          <PasswordInput
             id="newPassword"
-            type="password"
             value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
+            onChange={setNewPassword}
             autoComplete="new-password"
             required
           />
         </div>
         <div className="field">
           <label htmlFor="confirmPassword">Confirm new password</label>
-          <input
+          <PasswordInput
             id="confirmPassword"
-            type="password"
             value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
+            onChange={setConfirmPassword}
             autoComplete="new-password"
             required
           />
