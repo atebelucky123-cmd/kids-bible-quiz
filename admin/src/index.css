@@ -17,7 +17,7 @@
   --danger-bg: #fbeae8;
   --radius: 10px;
 
-  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
   color-scheme: light;
   color: var(--text);
 }
@@ -84,6 +84,52 @@ a {
   background: transparent;
   color: var(--ink);
   padding: 6px 10px;
+}
+
+.row-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.row-btn {
+  padding: 5px 11px;
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: inherit;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.row-btn-edit {
+  color: var(--cobalt);
+  background: rgba(58, 76, 160, 0.07);
+  border-color: rgba(58, 76, 160, 0.25);
+}
+
+.row-btn-edit:hover {
+  background: rgba(58, 76, 160, 0.14);
+}
+
+.row-btn-toggle {
+  color: #8a6d00;
+  background: rgba(217, 142, 27, 0.09);
+  border-color: rgba(217, 142, 27, 0.3);
+}
+
+.row-btn-toggle:hover {
+  background: rgba(217, 142, 27, 0.18);
+}
+
+.row-btn-danger {
+  color: var(--danger);
+  background: var(--danger-bg);
+  border-color: rgba(192, 57, 43, 0.3);
+}
+
+.row-btn-danger:hover {
+  background: rgba(192, 57, 43, 0.16);
 }
 
 .card {
@@ -307,29 +353,40 @@ th {
   font-size: 14px;
 }
 
-.stat-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 16px;
-  margin-bottom: 24px;
-}
-
-.stat-card {
+.stats-strip {
+  display: flex;
+  flex-wrap: wrap;
   background: var(--white);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 16px 20px;
+  margin-bottom: 24px;
+  overflow: hidden;
 }
 
-.stat-card .stat-value {
-  font-size: 28px;
+.stats-strip-item {
+  flex: 1 1 140px;
+  min-width: 0;
+  padding: 18px 20px;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.stats-strip-item:last-child {
+  border-right: none;
+  border-bottom: none;
+}
+
+.stats-strip-item .stat-value {
+  font-size: 26px;
   font-weight: 700;
   color: var(--cobalt);
+  line-height: 1.2;
 }
 
-.stat-card .stat-label {
+.stats-strip-item .stat-label {
   font-size: 13px;
   color: var(--text-secondary);
+  margin-top: 2px;
 }
 
 .age-band-row {

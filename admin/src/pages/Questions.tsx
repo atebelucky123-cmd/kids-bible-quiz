@@ -107,14 +107,14 @@ export function Questions() {
                       </span>
                     </td>
                     <td>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <button type="button" className="btn btn-ghost" onClick={() => setEditing(q)}>
+                      <div className="row-actions">
+                        <button type="button" className="row-btn row-btn-edit" onClick={() => setEditing(q)}>
                           Edit
                         </button>
-                        <button type="button" className="btn btn-ghost" onClick={() => handleToggleActive(q)}>
+                        <button type="button" className="row-btn row-btn-toggle" onClick={() => handleToggleActive(q)}>
                           {q.isActive ? 'Deactivate' : 'Activate'}
                         </button>
-                        <button type="button" className="btn btn-ghost" onClick={() => handleDelete(q)}>
+                        <button type="button" className="row-btn row-btn-danger" onClick={() => handleDelete(q)}>
                           Delete
                         </button>
                       </div>

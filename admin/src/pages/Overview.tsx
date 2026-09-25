@@ -26,24 +26,24 @@ export function Overview() {
         </div>
       </div>
 
-      <div className="stat-grid">
-        <div className="stat-card">
+      <div className="stats-strip">
+        <div className="stats-strip-item">
           <div className="stat-value">{data.counts.students}</div>
           <div className="stat-label">Students</div>
         </div>
-        <div className="stat-card">
+        <div className="stats-strip-item">
           <div className="stat-value">{data.counts.questions}</div>
           <div className="stat-label">Questions ({data.counts.activeQuestions} active)</div>
         </div>
-        <div className="stat-card">
+        <div className="stats-strip-item">
           <div className="stat-value">{data.counts.attempts}</div>
           <div className="stat-label">Quiz Attempts</div>
         </div>
-        <div className="stat-card">
+        <div className="stats-strip-item">
           <div className="stat-value">{data.counts.completedAttempts}</div>
           <div className="stat-label">Completed</div>
         </div>
-        <div className="stat-card">
+        <div className="stats-strip-item">
           <div className="stat-value">{data.completionRate}%</div>
           <div className="stat-label">Completion Rate</div>
         </div>
