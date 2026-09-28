@@ -515,3 +515,38 @@ th {
   width: 100%;
   margin-top: 6px;
 }
+
+.clickable-row {
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+
+.clickable-row:hover {
+  background: var(--surface);
+}
+
+.clickable-row:focus-visible {
+  outline: 2px solid var(--cobalt);
+  outline-offset: -2px;
+}
+
+.header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.row-chevron {
+  color: var(--text-secondary);
+  text-align: right;
+}
+
+.page-header {
+  gap: 16px;
+}
+
+.page-header > .btn {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
