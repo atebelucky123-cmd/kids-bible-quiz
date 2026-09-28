@@ -2,6 +2,9 @@ import { Router } from "express";
 import { validate } from "../middleware/validate";
 import { requireAuth, requireAdmin } from "../middleware/requireAuth";
 import {
+  createQuizSchema,
+  updateQuizSchema,
+  quizIdParamsSchema,
   createQuestionSchema,
   updateQuestionSchema,
   questionIdParamsSchema,
@@ -20,8 +23,25 @@ adminRouter.use(requireAuth, requireAdmin);
 
 adminRouter.get("/overview", admin.overview);
 
-adminRouter.get("/questions", admin.listQuestions);
-adminRouter.post("/questions", validate({ body: createQuestionSchema }), admin.createQuestion);
+adminRouter.get("/quizzes", admin.listQuizzes);
+adminRouter.post("/quizzes", validate({ body: createQuizSchema }), admin.createQuiz);
+adminRouter.patch(
+  "/quizzes/:id",
+  validate({ params: questionIdParamsSchema, body: updateQuizSchema }),
+  admin.updateQuiz
+);
+adminRouter.delete("/quizzes/:id", validate({ params: questionIdParamsSchema }), admin.deleteQuiz);
+
+adminRouter.get(
+  "/quizzes/:quizId/questions",
+  validate({ params: quizIdParamsSchema }),
+  admin.listQuestionsForQuiz
+);
+adminRouter.post(
+  "/quizzes/:quizId/questions",
+  validate({ params: quizIdParamsSchema, body: createQuestionSchema }),
+  admin.createQuestion
+);
 adminRouter.patch(
   "/questions/:id",
   validate({ params: questionIdParamsSchema, body: updateQuestionSchema }),

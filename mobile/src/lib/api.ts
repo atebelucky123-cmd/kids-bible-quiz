@@ -118,6 +118,7 @@ export type QuizAttemptSummary = {
   currentQuestionIndex: number;
   startedAt: string;
   completedAt: string | null;
+  quiz: { title: string };
 };
 
 export type AttemptsSummary = {
@@ -131,6 +132,15 @@ export type AttemptsSummary = {
     starsEarned: number;
     lastResult: QuizAttemptSummary | null;
   };
+};
+
+export type Quiz = {
+  id: number;
+  title: string;
+  ageMin: number;
+  ageMax: number;
+  timeLimitSeconds: number;
+  questionCount: number;
 };
 
 export type PublicQuestion = {
@@ -213,10 +223,14 @@ export const api = {
     return request<AttemptsSummary>('/api/me/attempts');
   },
 
-  async startQuiz(restart = false) {
+  async getAvailableQuizzes() {
+    return request<Quiz[]>('/api/quiz/available');
+  },
+
+  async startQuiz(restart: boolean, quizId: number) {
     return request<QuizAttemptState>('/api/quiz/start', {
       method: 'POST',
-      body: JSON.stringify({ restart }),
+      body: JSON.stringify({ restart, quizId }),
     });
   },
 

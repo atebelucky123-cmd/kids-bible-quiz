@@ -19,6 +19,7 @@ export async function getAttemptsSummary(userId: number) {
       lastActivityAt: true,
       startedAt: true,
       completedAt: true,
+      quiz: { select: { title: true } },
     },
   });
 

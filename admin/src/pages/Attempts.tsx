@@ -56,6 +56,7 @@ export function Attempts() {
               <thead>
                 <tr>
                   <th>Student</th>
+                  <th>Quiz</th>
                   <th>Age</th>
                   <th>Status</th>
                   <th>Progress</th>
@@ -70,6 +71,7 @@ export function Attempts() {
                     <td>
                       {a.student.firstName} {a.student.lastName}
                     </td>
+                    <td>{a.quiz.title}</td>
                     <td>{a.student.age}</td>
                     <td>
                       <span className={`badge ${a.status === 'FINISHED' ? 'badge-finished' : 'badge-in-progress'}`}>

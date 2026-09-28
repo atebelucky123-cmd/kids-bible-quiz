@@ -13,35 +13,50 @@ const ageRangeRefinement = <T extends { ageMin?: number; ageMax?: number }>(data
   }
 };
 
-export const createQuestionSchema = z
+export const createQuizSchema = z
   .object({
-    questionText: z.string().trim().min(1, "Question text is required").max(1000),
-    optionA: z.string().trim().min(1, "Option A is required").max(255),
-    optionB: z.string().trim().min(1, "Option B is required").max(255),
-    optionC: z.string().trim().min(1, "Option C is required").max(255),
-    optionD: z.string().trim().min(1, "Option D is required").max(255),
-    correctOption: answerOptionSchema,
+    title: z.string().trim().min(1, "Title is required").max(200),
     ageMin: z.coerce.number().int().min(5).max(12),
     ageMax: z.coerce.number().int().min(5).max(12),
+    timeLimitSeconds: z.coerce.number().int().min(5).max(600).optional(),
     isActive: z.boolean().optional(),
   })
   .superRefine(ageRangeRefinement);
 
-// Every field optional (a PATCH may only toggle `isActive`), but age bounds
-// are still cross-checked when both happen to be present in the same request.
-export const updateQuestionSchema = z
+export const updateQuizSchema = z
   .object({
-    questionText: z.string().trim().min(1).max(1000).optional(),
-    optionA: z.string().trim().min(1).max(255).optional(),
-    optionB: z.string().trim().min(1).max(255).optional(),
-    optionC: z.string().trim().min(1).max(255).optional(),
-    optionD: z.string().trim().min(1).max(255).optional(),
-    correctOption: answerOptionSchema.optional(),
+    title: z.string().trim().min(1).max(200).optional(),
     ageMin: z.coerce.number().int().min(5).max(12).optional(),
     ageMax: z.coerce.number().int().min(5).max(12).optional(),
+    timeLimitSeconds: z.coerce.number().int().min(5).max(600).optional(),
     isActive: z.boolean().optional(),
   })
   .superRefine(ageRangeRefinement);
+
+export const quizIdParamsSchema = z.object({
+  quizId: z.coerce.number().int().positive(),
+});
+
+export const createQuestionSchema = z.object({
+  questionText: z.string().trim().min(1, "Question text is required").max(1000),
+  optionA: z.string().trim().min(1, "Option A is required").max(255),
+  optionB: z.string().trim().min(1, "Option B is required").max(255),
+  optionC: z.string().trim().min(1, "Option C is required").max(255),
+  optionD: z.string().trim().min(1, "Option D is required").max(255),
+  correctOption: answerOptionSchema,
+  isActive: z.boolean().optional(),
+});
+
+// Every field optional (a PATCH may only toggle `isActive`).
+export const updateQuestionSchema = z.object({
+  questionText: z.string().trim().min(1).max(1000).optional(),
+  optionA: z.string().trim().min(1).max(255).optional(),
+  optionB: z.string().trim().min(1).max(255).optional(),
+  optionC: z.string().trim().min(1).max(255).optional(),
+  optionD: z.string().trim().min(1).max(255).optional(),
+  correctOption: answerOptionSchema.optional(),
+  isActive: z.boolean().optional(),
+});
 
 export const questionIdParamsSchema = z.object({
   id: z.coerce.number().int().positive(),

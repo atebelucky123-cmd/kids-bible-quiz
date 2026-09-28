@@ -1,92 +1,89 @@
 import { useEffect, useState } from 'react';
-import { api, ApiError, type Question, type QuestionInput } from '../lib/api';
-import { QuestionForm } from '../components/QuestionForm';
+import { useNavigate } from 'react-router-dom';
+import { api, ApiError, type Quiz, type QuizInput } from '../lib/api';
+import { QuizForm } from '../components/QuizForm';
 
-export function Questions() {
-  const [questions, setQuestions] = useState<Question[] | null>(null);
+export function Quizzes() {
+  const navigate = useNavigate();
+  const [quizzes, setQuizzes] = useState<Quiz[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
-  const [editing, setEditing] = useState<Question | 'new' | null>(null);
+  const [editing, setEditing] = useState<Quiz | 'new' | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
   function reload() {
     api
-      .listQuestions()
-      .then(setQuestions)
+      .listQuizzes()
+      .then(setQuizzes)
       .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load'));
   }
 
   useEffect(reload, []);
 
-  async function handleSave(input: QuestionInput) {
+  async function handleSave(input: QuizInput) {
     if (editing && editing !== 'new') {
-      await api.updateQuestion(editing.id, input);
+      await api.updateQuiz(editing.id, input);
     } else {
-      await api.createQuestion(input);
+      await api.createQuiz(input);
     }
     setEditing(null);
     reload();
   }
 
-  async function handleToggleActive(q: Question) {
+  async function handleToggleActive(q: Quiz) {
     setActionError(null);
     try {
-      await api.updateQuestion(q.id, { isActive: !q.isActive });
+      await api.updateQuiz(q.id, { isActive: !q.isActive });
       reload();
     } catch (err) {
-      setActionError(err instanceof ApiError ? err.message : 'Failed to update question');
+      setActionError(err instanceof ApiError ? err.message : 'Failed to update quiz');
     }
   }
 
-  async function handleDelete(q: Question) {
-    if (!confirm(`Delete "${q.questionText}"? This cannot be undone.`)) return;
+  async function handleDelete(q: Quiz) {
+    if (!confirm(`Delete "${q.title}"? This cannot be undone.`)) return;
     setActionError(null);
     try {
-      await api.deleteQuestion(q.id);
+      await api.deleteQuiz(q.id);
       reload();
     } catch (err) {
-      setActionError(err instanceof ApiError ? err.message : 'Failed to delete question');
+      setActionError(err instanceof ApiError ? err.message : 'Failed to delete quiz');
     }
   }
 
-  const filtered = (questions ?? []).filter((q) =>
-    q.questionText.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = (quizzes ?? []).filter((q) => q.title.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <div>
       <div className="page-header">
         <div>
-          <h1>Questions</h1>
-          <p>The question bank students draw from, filtered by age range at quiz time.</p>
+          <h1>Quizzes</h1>
+          <p>Named quizzes students pick from, each with its own curated question set.</p>
         </div>
         <button type="button" className="btn btn-primary" onClick={() => setEditing('new')}>
-          + Add Question
+          + Add Quiz
         </button>
       </div>
 
       <div className="toolbar">
-        <input
-          placeholder="Search question text…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+        <input placeholder="Search quiz title…" value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
 
       {error && <p className="error-text">{error}</p>}
       {actionError && <p className="error-text">{actionError}</p>}
 
-      {questions && (
+      {quizzes && (
         <div className="card" style={{ padding: 0 }}>
           {filtered.length === 0 ? (
-            <div className="empty-state">No questions match this search.</div>
+            <div className="empty-state">No quizzes match this search.</div>
           ) : (
             <table>
               <thead>
                 <tr>
-                  <th>Question</th>
+                  <th>Title</th>
                   <th>Age Range</th>
-                  <th>Correct Answer</th>
+                  <th>Questions</th>
+                  <th>Time Limit</th>
                   <th>Status</th>
                   <th></th>
                 </tr>
@@ -94,13 +91,29 @@ export function Questions() {
               <tbody>
                 {filtered.map((q) => (
                   <tr key={q.id}>
-                    <td style={{ maxWidth: 360 }}>{q.questionText}</td>
+                    <td>
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/quizzes/${q.id}`)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          padding: 0,
+                          font: 'inherit',
+                          color: 'var(--cobalt)',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                        }}
+                      >
+                        {q.title}
+                      </button>
+                    </td>
                     <td>
                       {q.ageMin}–{q.ageMax}
                     </td>
-                    <td>
-                      {q.correctOption}: {q[`option${q.correctOption}` as 'optionA']}
-                    </td>
+                    <td>{q.questionCount}</td>
+                    <td>{q.timeLimitSeconds}s</td>
                     <td>
                       <span className={`badge ${q.isActive ? 'badge-active' : 'badge-inactive'}`}>
                         {q.isActive ? 'Active' : 'Inactive'}
@@ -128,11 +141,7 @@ export function Questions() {
       )}
 
       {editing && (
-        <QuestionForm
-          initial={editing === 'new' ? undefined : editing}
-          onSubmit={handleSave}
-          onCancel={() => setEditing(null)}
-        />
+        <QuizForm initial={editing === 'new' ? undefined : editing} onSubmit={handleSave} onCancel={() => setEditing(null)} />
       )}
     </div>
   );

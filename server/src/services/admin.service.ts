@@ -5,6 +5,8 @@ import { AppError } from "../utils/AppError";
 import { secondsRemainingFor } from "./quiz.service";
 import { z } from "zod";
 import {
+  createQuizSchema,
+  updateQuizSchema,
   createQuestionSchema,
   updateQuestionSchema,
   attemptsQuerySchema,
@@ -12,10 +14,14 @@ import {
 } from "../validators/admin.validators";
 
 const SALT_ROUNDS = 10;
+// The client's notes cap a quiz at 70 questions (spec Section 10) — this
+// still applies to a curated quiz's own question set, even though nothing
+// picks a random subset from it anymore.
+const MAX_QUESTIONS_PER_QUIZ = 70;
 
 // Display-only grouping for the Overview chart (development plan Appendix
-// A) — the underlying Question model keeps a freeform ageMin/ageMax, this
-// never changes how questions are stored or filtered.
+// A) — a reporting convenience bucketing the *student's* age, unrelated to
+// how a quiz's own ageMin/ageMax works.
 const AGE_BANDS = [
   { label: "5-7", min: 5, max: 7 },
   { label: "8-10", min: 8, max: 10 },
@@ -27,15 +33,23 @@ function bandFor(age: number) {
 }
 
 export async function getOverview() {
-  const [totalStudents, totalQuestions, activeQuestions, totalAttempts, completedAttempts, attemptsWithAge] =
-    await Promise.all([
-      prisma.user.count({ where: { role: "STUDENT" } }),
-      prisma.question.count(),
-      prisma.question.count({ where: { isActive: true } }),
-      prisma.quizAttempt.count(),
-      prisma.quizAttempt.count({ where: { status: "FINISHED" } }),
-      prisma.quizAttempt.findMany({ select: { user: { select: { age: true } } } }),
-    ]);
+  const [
+    totalStudents,
+    totalQuizzes,
+    totalQuestions,
+    activeQuestions,
+    totalAttempts,
+    completedAttempts,
+    attemptsWithAge,
+  ] = await Promise.all([
+    prisma.user.count({ where: { role: "STUDENT" } }),
+    prisma.quiz.count(),
+    prisma.question.count(),
+    prisma.question.count({ where: { isActive: true } }),
+    prisma.quizAttempt.count(),
+    prisma.quizAttempt.count({ where: { status: "FINISHED" } }),
+    prisma.quizAttempt.findMany({ select: { user: { select: { age: true } } } }),
+  ]);
 
   const ageBandBreakdown = AGE_BANDS.map((band) => ({
     band: band.label,
@@ -45,6 +59,7 @@ export async function getOverview() {
   return {
     counts: {
       students: totalStudents,
+      quizzes: totalQuizzes,
       questions: totalQuestions,
       activeQuestions,
       attempts: totalAttempts,
@@ -55,13 +70,87 @@ export async function getOverview() {
   };
 }
 
-export async function listQuestions() {
-  return prisma.question.findMany({ orderBy: { createdAt: "desc" } });
+export async function listQuizzes() {
+  const quizzes = await prisma.quiz.findMany({
+    orderBy: { createdAt: "desc" },
+    include: { _count: { select: { questions: true } } },
+  });
+  return quizzes.map((q) => ({
+    id: q.id,
+    title: q.title,
+    ageMin: q.ageMin,
+    ageMax: q.ageMax,
+    timeLimitSeconds: q.timeLimitSeconds,
+    isActive: q.isActive,
+    questionCount: q._count.questions,
+    createdAt: q.createdAt,
+    updatedAt: q.updatedAt,
+  }));
 }
 
-export async function createQuestion(input: z.infer<typeof createQuestionSchema>) {
-  return prisma.question.create({
+export async function createQuiz(input: z.infer<typeof createQuizSchema>) {
+  return prisma.quiz.create({
     data: { ...input, isActive: input.isActive ?? true },
+  });
+}
+
+export async function updateQuiz(id: number, input: z.infer<typeof updateQuizSchema>) {
+  const existing = await prisma.quiz.findUnique({ where: { id } });
+  if (!existing) {
+    throw new AppError("Quiz not found", 404, "NOT_FOUND");
+  }
+
+  const merged = { ageMin: existing.ageMin, ageMax: existing.ageMax, ...input };
+  if (merged.ageMin > merged.ageMax) {
+    throw new AppError("Minimum age cannot be greater than maximum age", 400, "INVALID_AGE_RANGE");
+  }
+
+  return prisma.quiz.update({ where: { id }, data: input });
+}
+
+export async function deleteQuiz(id: number) {
+  try {
+    await prisma.quiz.delete({ where: { id } });
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025") {
+      throw new AppError("Quiz not found", 404, "NOT_FOUND");
+    }
+    // Same NoAction/P2003 pattern as deleteQuestion below — a quiz that
+    // already has attempts against it can't be hard-deleted without
+    // destroying grading history.
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2003") {
+      throw new AppError(
+        "This quiz has already been attempted by a student — deactivate it instead of deleting.",
+        409,
+        "QUIZ_IN_USE"
+      );
+    }
+    throw err;
+  }
+}
+
+export async function listQuestionsForQuiz(quizId: number) {
+  const quiz = await prisma.quiz.findUnique({ where: { id: quizId } });
+  if (!quiz) {
+    throw new AppError("Quiz not found", 404, "NOT_FOUND");
+  }
+  const questions = await prisma.question.findMany({ where: { quizId }, orderBy: { createdAt: "asc" } });
+  return { quiz, questions };
+}
+
+export async function createQuestion(quizId: number, input: z.infer<typeof createQuestionSchema>) {
+  const quiz = await prisma.quiz.findUnique({ where: { id: quizId } });
+  if (!quiz) {
+    throw new AppError("Quiz not found", 404, "NOT_FOUND");
+  }
+
+  const existingCount = await prisma.question.count({ where: { quizId } });
+  if (existingCount >= MAX_QUESTIONS_PER_QUIZ) {
+    throw new AppError(`A quiz can't have more than ${MAX_QUESTIONS_PER_QUIZ} questions`, 409, "QUIZ_FULL");
+  }
+
+  return prisma.question.create({
+    data: { ...input, quizId, isActive: input.isActive ?? true },
   });
 }
 
@@ -70,14 +159,6 @@ export async function updateQuestion(id: number, input: z.infer<typeof updateQue
   if (!existing) {
     throw new AppError("Question not found", 404, "NOT_FOUND");
   }
-
-  // ageMin/ageMax cross-validation runs against the *merged* result, since a
-  // PATCH can legitimately send only one of the two bounds.
-  const merged = { ageMin: existing.ageMin, ageMax: existing.ageMax, ...input };
-  if (merged.ageMin > merged.ageMax) {
-    throw new AppError("Minimum age cannot be greater than maximum age", 400, "INVALID_AGE_RANGE");
-  }
-
   return prisma.question.update({ where: { id }, data: input });
 }
 
@@ -88,11 +169,11 @@ export async function deleteQuestion(id: number) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025") {
       throw new AppError("Question not found", 404, "NOT_FOUND");
     }
-    // The Answer -> Question relation is onDelete: Restrict (schema.prisma)
+    // The Answer -> Question relation is onDelete: NoAction (schema.prisma)
     // — a question that already has recorded answers can't be hard-deleted
     // without destroying grading history. Deactivating is the safe
-    // equivalent: it stops appearing in new quizzes without touching the
-    // past attempts that reference it.
+    // equivalent: it stops appearing in new attempts of this quiz without
+    // touching the past attempts that reference it.
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2003") {
       throw new AppError(
         "This question has already been used in a quiz attempt — deactivate it instead of deleting.",
@@ -154,7 +235,10 @@ export async function listAttempts(filters: z.infer<typeof attemptsQuerySchema>)
       }),
     },
     orderBy: { startedAt: "desc" },
-    include: { user: { select: { id: true, firstName: true, lastName: true, age: true } } },
+    include: {
+      user: { select: { id: true, firstName: true, lastName: true, age: true } },
+      quiz: { select: { id: true, title: true } },
+    },
   });
 
   return attempts.map((attempt) => {
@@ -162,6 +246,7 @@ export async function listAttempts(filters: z.infer<typeof attemptsQuerySchema>)
     return {
       id: attempt.id,
       student: attempt.user,
+      quiz: attempt.quiz,
       status: attempt.status,
       currentQuestionIndex: attempt.currentQuestionIndex,
       totalQuestions: attempt.totalQuestions,

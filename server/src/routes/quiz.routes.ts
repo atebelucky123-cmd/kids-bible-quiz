@@ -2,10 +2,12 @@ import { Router } from "express";
 import { validate } from "../middleware/validate";
 import { requireAuth } from "../middleware/requireAuth";
 import { startQuizSchema, attemptParamsSchema, submitAnswerSchema } from "../validators/quiz.validators";
-import { start, getQuestion, answer, result } from "../controllers/quiz.controller";
+import { start, getQuestion, answer, result, availableQuizzes } from "../controllers/quiz.controller";
 
 export const quizRouter = Router();
 
+// Must come before "/:attemptId" so Express doesn't treat "available" as an attemptId.
+quizRouter.get("/available", requireAuth, availableQuizzes);
 quizRouter.post("/start", requireAuth, validate({ body: startQuizSchema }), start);
 quizRouter.get("/:attemptId", requireAuth, validate({ params: attemptParamsSchema }), getQuestion);
 quizRouter.post(

@@ -58,16 +58,35 @@ export type AdminUser = {
 
 export type AnswerOption = 'A' | 'B' | 'C' | 'D';
 
+export type Quiz = {
+  id: number;
+  title: string;
+  ageMin: number;
+  ageMax: number;
+  timeLimitSeconds: number;
+  isActive: boolean;
+  questionCount: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type QuizInput = {
+  title: string;
+  ageMin: number;
+  ageMax: number;
+  timeLimitSeconds?: number;
+  isActive?: boolean;
+};
+
 export type Question = {
   id: number;
+  quizId: number;
   questionText: string;
   optionA: string;
   optionB: string;
   optionC: string;
   optionD: string;
   correctOption: AnswerOption;
-  ageMin: number;
-  ageMax: number;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -80,8 +99,6 @@ export type QuestionInput = {
   optionC: string;
   optionD: string;
   correctOption: AnswerOption;
-  ageMin: number;
-  ageMax: number;
   isActive?: boolean;
 };
 
@@ -99,6 +116,7 @@ export type Student = {
 export type Attempt = {
   id: number;
   student: { id: number; firstName: string; lastName: string; age: number };
+  quiz: { id: number; title: string };
   status: 'IN_PROGRESS' | 'FINISHED';
   currentQuestionIndex: number;
   totalQuestions: number;
@@ -113,6 +131,7 @@ export type Attempt = {
 export type Overview = {
   counts: {
     students: number;
+    quizzes: number;
     questions: number;
     activeQuestions: number;
     attempts: number;
@@ -144,12 +163,31 @@ export const api = {
     return request<Overview>('/api/admin/overview');
   },
 
-  async listQuestions() {
-    return request<Question[]>('/api/admin/questions');
+  async listQuizzes() {
+    return request<Quiz[]>('/api/admin/quizzes');
   },
 
-  async createQuestion(input: QuestionInput) {
-    return request<Question>('/api/admin/questions', { method: 'POST', body: JSON.stringify(input) });
+  async createQuiz(input: QuizInput) {
+    return request<Quiz>('/api/admin/quizzes', { method: 'POST', body: JSON.stringify(input) });
+  },
+
+  async updateQuiz(id: number, input: Partial<QuizInput>) {
+    return request<Quiz>(`/api/admin/quizzes/${id}`, { method: 'PATCH', body: JSON.stringify(input) });
+  },
+
+  async deleteQuiz(id: number) {
+    return request<void>(`/api/admin/quizzes/${id}`, { method: 'DELETE' });
+  },
+
+  async getQuizQuestions(quizId: number) {
+    return request<{ quiz: Quiz; questions: Question[] }>(`/api/admin/quizzes/${quizId}/questions`);
+  },
+
+  async createQuestion(quizId: number, input: QuestionInput) {
+    return request<Question>(`/api/admin/quizzes/${quizId}/questions`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
   },
 
   async updateQuestion(id: number, input: Partial<QuestionInput>) {

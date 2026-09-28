@@ -28,6 +28,10 @@ export function Overview() {
 
       <div className="stats-strip">
         <div className="stats-strip-item">
+          <div className="stat-value">{data.counts.quizzes}</div>
+          <div className="stat-label">Quizzes</div>
+        </div>
+        <div className="stats-strip-item">
           <div className="stat-value">{data.counts.students}</div>
           <div className="stat-label">Students</div>
         </div>

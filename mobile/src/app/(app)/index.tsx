@@ -1,5 +1,4 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/button';
@@ -10,27 +9,17 @@ import { StatCard } from '@/components/ui/stat-card';
 import { Brand, Spacing } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
 import { useAttemptsSummary } from '@/hooks/use-attempts-summary';
-import { api, ApiError } from '@/lib/api';
 
 export default function HomeScreen() {
   const { user, logout } = useAuth();
   const { state, reload } = useAttemptsSummary();
-  const [starting, setStarting] = useState(false);
-  const [startError, setStartError] = useState<string | null>(null);
 
   if (!user) return null;
 
-  async function handleStart(restart: boolean) {
-    setStartError(null);
-    setStarting(true);
-    try {
-      const attempt = await api.startQuiz(restart);
-      router.push({ pathname: '/quiz/[attemptId]', params: { attemptId: String(attempt.attemptId) } });
-    } catch (err) {
-      setStartError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.');
-    } finally {
-      setStarting(false);
-    }
+  // Starting (or restarting) no longer creates an attempt directly from
+  // Home — the student picks which named quiz to take first.
+  function handleStart(restart: boolean) {
+    router.push({ pathname: '/quiz/choose', params: { restart: restart ? '1' : '0' } });
   }
 
   if (state.status === 'loading') {
@@ -89,7 +78,6 @@ export default function HomeScreen() {
                   <Button
                     title="Continue Quiz"
                     variant="secondary"
-                    loading={starting}
                     onPress={() =>
                       router.push({
                         pathname: '/quiz/[attemptId]',
@@ -101,14 +89,12 @@ export default function HomeScreen() {
                 <Button
                   title="Start a New Quiz"
                   variant={canContinue ? 'outline' : 'primary'}
-                  loading={starting}
                   onPress={() => handleStart(true)}
                 />
               </>
             ) : (
-              <Button title="Start Quiz" variant="primary" loading={starting} onPress={() => handleStart(false)} />
+              <Button title="Start Quiz" variant="primary" onPress={() => handleStart(false)} />
             )}
-            {startError ? <Text style={styles.errorText}>{startError}</Text> : null}
           </View>
 
           <View style={styles.statsRow}>

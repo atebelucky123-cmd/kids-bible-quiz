@@ -2,14 +2,6 @@ import { AnswerOption, AttemptStatus } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import { AppError } from "../utils/AppError";
 
-// The client's notes cap a quiz at 70 questions; the exact per-quiz count
-// and time limit are Open Requirements (development plan Appendix A) —
-// these are reasonable configurable defaults, not confirmed final values,
-// until the admin dashboard (Phase 11) can set them.
-const DEFAULT_QUESTION_COUNT = 20;
-const MAX_QUESTIONS_PER_QUIZ = 70;
-const DEFAULT_TIME_LIMIT_SECONDS = 30;
-
 function shuffle<T>(items: T[]): T[] {
   const result = [...items];
   for (let i = result.length - 1; i > 0; i--) {
@@ -60,7 +52,36 @@ function toAttemptSummary(attempt: {
   };
 }
 
-export async function startQuiz(userId: number, restart: boolean) {
+// The student's own choice, made from the list returned here — replaces the
+// old flat age-eligible question pool entirely (developer decision, see the
+// "Named Quizzes" plan). A quiz's own ageMin/ageMax gates which quizzes a
+// student even sees; there's no further per-question age filtering once
+// they've picked one.
+export async function listAvailableQuizzes(userId: number) {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) {
+    throw new AppError("User not found", 404, "NOT_FOUND");
+  }
+
+  const quizzes = await prisma.quiz.findMany({
+    where: { isActive: true, ageMin: { lte: user.age }, ageMax: { gte: user.age } },
+    include: { _count: { select: { questions: { where: { isActive: true } } } } },
+    orderBy: { title: "asc" },
+  });
+
+  return quizzes
+    .map((q) => ({
+      id: q.id,
+      title: q.title,
+      ageMin: q.ageMin,
+      ageMax: q.ageMax,
+      timeLimitSeconds: q.timeLimitSeconds,
+      questionCount: q._count.questions,
+    }))
+    .filter((q) => q.questionCount > 0);
+}
+
+export async function startQuiz(userId: number, restart: boolean, quizId: number) {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) {
     throw new AppError("User not found", 404, "NOT_FOUND");
@@ -74,7 +95,8 @@ export async function startQuiz(userId: number, restart: boolean) {
   if (existing && !restart) {
     // The Home screen should navigate straight to an existing in-progress
     // attempt rather than calling this — but if it does anyway (stale UI,
-    // double tap), resume instead of silently creating a second one.
+    // double tap), resume instead of silently creating a second one,
+    // regardless of which quiz was requested this time.
     return toAttemptSummary(existing);
   }
 
@@ -93,25 +115,35 @@ export async function startQuiz(userId: number, restart: boolean) {
     });
   }
 
-  const eligibleQuestions = await prisma.question.findMany({
-    where: { isActive: true, ageMin: { lte: user.age }, ageMax: { gte: user.age } },
-  });
-
-  if (eligibleQuestions.length === 0) {
-    throw new AppError("No questions are available for your age yet", 409, "NO_QUESTIONS_AVAILABLE");
+  const quiz = await prisma.quiz.findUnique({ where: { id: quizId } });
+  if (!quiz) {
+    throw new AppError("Quiz not found", 404, "NOT_FOUND");
+  }
+  // Never trust that a client only ever requests a quiz it was shown by
+  // listAvailableQuizzes — re-check active + age-eligibility server-side
+  // (spec Section 20's "do not trust the client" posture, same as the age
+  // check on registration).
+  if (!quiz.isActive || user.age < quiz.ageMin || user.age > quiz.ageMax) {
+    throw new AppError("This quiz isn't available for you right now", 409, "QUIZ_NOT_AVAILABLE");
   }
 
-  const questionCount = Math.min(eligibleQuestions.length, DEFAULT_QUESTION_COUNT, MAX_QUESTIONS_PER_QUIZ);
-  const questionIds = shuffle(eligibleQuestions)
-    .slice(0, questionCount)
-    .map((q) => q.id);
+  const activeQuestions = await prisma.question.findMany({ where: { quizId, isActive: true } });
+  if (activeQuestions.length === 0) {
+    throw new AppError("This quiz doesn't have any questions yet", 409, "NO_QUESTIONS_AVAILABLE");
+  }
+
+  // The admin's exact set, just shuffled — no random subset/cap. The
+  // client's 70-question ceiling (spec Section 10) is enforced instead at
+  // question-creation time (admin.service.ts's createQuestion).
+  const questionIds = shuffle(activeQuestions).map((q) => q.id);
 
   const attempt = await prisma.quizAttempt.create({
     data: {
       userId,
+      quizId,
       questionIds,
       totalQuestions: questionIds.length,
-      timeLimitSeconds: DEFAULT_TIME_LIMIT_SECONDS,
+      timeLimitSeconds: quiz.timeLimitSeconds,
     },
   });
 

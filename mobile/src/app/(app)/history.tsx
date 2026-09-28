@@ -33,6 +33,7 @@ function HistoryItem({ attempt }: { attempt: QuizAttemptSummary }) {
           <Text style={styles.itemPercentage}>{Math.round(attempt.percentage ?? 0)}%</Text>
         )}
       </View>
+      <Text style={styles.itemQuizTitle}>{attempt.quiz.title}</Text>
       <Text style={styles.itemScore}>
         {isInProgress
           ? `Question ${attempt.currentQuestionIndex + 1} of ${attempt.totalQuestions}`
@@ -104,6 +105,7 @@ const styles = StyleSheet.create({
   itemRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   itemDate: { fontSize: 13, fontWeight: '700', color: Brand.cobalt, textTransform: 'uppercase', letterSpacing: 0.5 },
   itemPercentage: { fontSize: 18, fontWeight: '800', color: Brand.cobalt },
+  itemQuizTitle: { fontSize: 15, fontWeight: '700', color: Brand.ink },
   badgeSaved: {
     fontSize: 12,
     fontWeight: '800',

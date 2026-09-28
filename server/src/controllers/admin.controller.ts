@@ -9,9 +9,45 @@ export async function overview(_req: Request, res: Response, next: NextFunction)
   }
 }
 
-export async function listQuestions(_req: Request, res: Response, next: NextFunction) {
+export async function listQuizzes(_req: Request, res: Response, next: NextFunction) {
   try {
-    res.json(await adminService.listQuestions());
+    res.json(await adminService.listQuizzes());
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function createQuiz(req: Request, res: Response, next: NextFunction) {
+  try {
+    res.status(201).json(await adminService.createQuiz(req.body));
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function updateQuiz(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { id } = req.params as unknown as { id: number };
+    res.json(await adminService.updateQuiz(id, req.body));
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function deleteQuiz(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { id } = req.params as unknown as { id: number };
+    await adminService.deleteQuiz(id);
+    res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function listQuestionsForQuiz(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { quizId } = req.params as unknown as { quizId: number };
+    res.json(await adminService.listQuestionsForQuiz(quizId));
   } catch (err) {
     next(err);
   }
@@ -19,7 +55,8 @@ export async function listQuestions(_req: Request, res: Response, next: NextFunc
 
 export async function createQuestion(req: Request, res: Response, next: NextFunction) {
   try {
-    res.status(201).json(await adminService.createQuestion(req.body));
+    const { quizId } = req.params as unknown as { quizId: number };
+    res.status(201).json(await adminService.createQuestion(quizId, req.body));
   } catch (err) {
     next(err);
   }

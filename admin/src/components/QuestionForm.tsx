@@ -23,8 +23,6 @@ export function QuestionForm({ initial, onSubmit, onCancel }: Props) {
     optionD: initial?.optionD ?? '',
   });
   const [correctOption, setCorrectOption] = useState<AnswerOption>(initial?.correctOption ?? 'A');
-  const [ageMin, setAgeMin] = useState(initial?.ageMin ?? 5);
-  const [ageMax, setAgeMax] = useState(initial?.ageMax ?? 12);
   const [isActive, setIsActive] = useState(initial?.isActive ?? true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -38,8 +36,6 @@ export function QuestionForm({ initial, onSubmit, onCancel }: Props) {
         questionText,
         ...options,
         correctOption,
-        ageMin: Number(ageMin),
-        ageMax: Number(ageMax),
         isActive,
       });
     } catch (err) {
@@ -97,35 +93,8 @@ export function QuestionForm({ initial, onSubmit, onCancel }: Props) {
           <div className="field">
             <label>
               <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />{' '}
-              Active (shown in new quizzes)
+              Active (shown in new attempts)
             </label>
-          </div>
-        </div>
-
-        <div className="option-row">
-          <div className="field">
-            <label htmlFor="ageMin">Minimum Age</label>
-            <input
-              id="ageMin"
-              type="number"
-              min={5}
-              max={12}
-              value={ageMin}
-              onChange={(e) => setAgeMin(Number(e.target.value))}
-              required
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="ageMax">Maximum Age</label>
-            <input
-              id="ageMax"
-              type="number"
-              min={5}
-              max={12}
-              value={ageMax}
-              onChange={(e) => setAgeMax(Number(e.target.value))}
-              required
-            />
           </div>
         </div>
 

@@ -1,11 +1,25 @@
 import { AnswerOption } from "@prisma/client";
 import { Request, Response, NextFunction } from "express";
-import { startQuiz, getCurrentQuestion, submitAnswer, getResult } from "../services/quiz.service";
+import {
+  startQuiz,
+  getCurrentQuestion,
+  submitAnswer,
+  getResult,
+  listAvailableQuizzes,
+} from "../services/quiz.service";
+
+export async function availableQuizzes(req: Request, res: Response, next: NextFunction) {
+  try {
+    res.json(await listAvailableQuizzes(req.user!.userId));
+  } catch (err) {
+    next(err);
+  }
+}
 
 export async function start(req: Request, res: Response, next: NextFunction) {
   try {
-    const { restart } = req.body as { restart: boolean };
-    const attempt = await startQuiz(req.user!.userId, restart);
+    const { restart, quizId } = req.body as { restart: boolean; quizId: number };
+    const attempt = await startQuiz(req.user!.userId, restart, quizId);
     res.status(201).json(attempt);
   } catch (err) {
     next(err);

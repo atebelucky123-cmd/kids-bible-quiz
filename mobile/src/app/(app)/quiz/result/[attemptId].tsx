@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,6 @@ import { Brand, Spacing } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
 import { useCheersSound } from '@/hooks/use-cheers-sound';
 import { useQuizResult } from '@/hooks/use-quiz-result';
-import { api, ApiError } from '@/lib/api';
 
 // Matches the two result variants in the approved UI design (Appendix C):
 // above 70% plays the cheers/claps audio, 70% or below shows an
@@ -19,8 +18,6 @@ export default function ResultScreen() {
   const { state } = useQuizResult(Number(attemptId));
   const cheersPlayer = useCheersSound();
   const hasPlayedRef = useRef(false);
-  const [starting, setStarting] = useState(false);
-  const [startError, setStartError] = useState<string | null>(null);
 
   useEffect(() => {
     if (state.status === 'ready' && state.data.playCheers && !hasPlayedRef.current) {
@@ -30,22 +27,13 @@ export default function ResultScreen() {
     }
   }, [state, cheersPlayer]);
 
-  async function handlePlayAgain() {
-    setStartError(null);
-    setStarting(true);
-    try {
-      // Always restart: this is the Result screen for a quiz that's
-      // already finished, so if some other stray in-progress attempt
-      // exists (e.g. an old one abandoned by timing out rather than via
-      // "Start a New Quiz"), "Play Again" must still get a genuinely new
-      // quiz, not silently resume that stale one.
-      const attempt = await api.startQuiz(true);
-      router.replace({ pathname: '/quiz/[attemptId]', params: { attemptId: String(attempt.attemptId) } });
-    } catch (err) {
-      setStartError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.');
-    } finally {
-      setStarting(false);
-    }
+  // "Play Again" no longer restarts the same quiz directly — a finished
+  // attempt always sends the student back to the quiz picker, passing
+  // restart=1 so any stray in-progress attempt (e.g. one abandoned by
+  // timing out rather than via "Start a New Quiz") gets finalized rather
+  // than silently resumed.
+  function handlePlayAgain() {
+    router.replace({ pathname: '/quiz/choose', params: { restart: '1' } });
   }
 
   if (state.status === 'loading') {
@@ -86,10 +74,8 @@ export default function ResultScreen() {
           <Text style={styles.encouragement}>Good try, {user?.firstName}. Play again for more stars.</Text>
         ) : null}
 
-        {startError ? <Text style={styles.errorText}>{startError}</Text> : null}
-
         <View style={styles.actions}>
-          <Button title="Play Again" variant="primary" loading={starting} onPress={handlePlayAgain} />
+          <Button title="Play Again" variant="primary" onPress={handlePlayAgain} />
           <Button title="Back to Home" variant="outline" onPress={() => router.replace('/')} />
         </View>
       </SafeAreaView>

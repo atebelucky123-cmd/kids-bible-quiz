@@ -55,23 +55,44 @@ model User {
   @@map("users")
 }
 
-model Question {
-  id           Int          @id @default(autoincrement())
-  questionText String       @map("question_text")
-  optionA      String       @map("option_a")
-  optionB      String       @map("option_b")
-  optionC      String       @map("option_c")
-  optionD      String       @map("option_d")
-  correctOption AnswerOption @map("correct_option")
-  ageMin       Int          @map("age_min")
-  ageMax       Int          @map("age_max")
-  isActive     Boolean      @default(true) @map("is_active")
-  createdAt    DateTime     @default(now()) @map("created_at")
-  updatedAt    DateTime     @updatedAt @map("updated_at")
+model Quiz {
+  id               Int      @id @default(autoincrement())
+  title            String
+  ageMin           Int      @map("age_min")
+  ageMax           Int      @map("age_max")
+  timeLimitSeconds Int      @default(30) @map("time_limit_seconds")
+  isActive         Boolean  @default(true) @map("is_active")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
 
-  answers Answer[]
+  questions Question[]
+  attempts  QuizAttempt[]
 
   @@index([ageMin, ageMax])
+  @@index([isActive])
+  @@map("quizzes")
+}
+
+model Question {
+  id            Int          @id @default(autoincrement())
+  quizId        Int          @map("quiz_id")
+  questionText  String       @map("question_text")
+  optionA       String       @map("option_a")
+  optionB       String       @map("option_b")
+  optionC       String       @map("option_c")
+  optionD       String       @map("option_d")
+  correctOption AnswerOption @map("correct_option")
+  isActive      Boolean      @default(true) @map("is_active")
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+
+  // A question is meaningless without its quiz, and by the time a quiz is
+  // deletable at all (see Quiz.attempts' onDelete note), none of its
+  // questions have recorded answers either — so cascading here is safe.
+  quiz    Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  answers Answer[]
+
+  @@index([quizId])
   @@index([isActive])
   @@map("questions")
 }
@@ -79,6 +100,7 @@ model Question {
 model QuizAttempt {
   id                   Int           @id @default(autoincrement())
   userId               Int           @map("user_id")
+  quizId               Int           @map("quiz_id")
   status               AttemptStatus @default(IN_PROGRESS)
   // Fixed, ordered list of question IDs selected for this attempt at start time.
   // currentQuestionIndex is a position into this array (0-based).
@@ -94,7 +116,11 @@ model QuizAttempt {
   createdAt            DateTime      @default(now()) @map("created_at")
   updatedAt            DateTime      @updatedAt @map("updated_at")
 
-  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // NoAction, not Restrict: a quiz with any attempts against it can't be
+  // hard-deleted, must be deactivated instead — same reasoning and the same
+  // Prisma/Postgres error-code gotcha as the Answer -> Question fix below.
+  quiz    Quiz     @relation(fields: [quizId], references: [id], onDelete: NoAction)
   answers Answer[]
 
   @@index([userId, status])
