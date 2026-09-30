@@ -5,7 +5,9 @@ type AuthContextValue = {
   user: AdminUser | null;
   loading: boolean;
   login: (firstName: string, password: string) => Promise<void>;
-  logout: () => Promise<void>;
+  // Optional message for the login screen, e.g. after a password change.
+  logout: (notice?: string) => Promise<void>;
+  notice: string | null;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -13,6 +15,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AdminUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     api
@@ -32,15 +35,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await api.logout().catch(() => {});
       throw new Error('This account does not have admin access.');
     }
+    setNotice(null);
     setUser(loggedIn);
   }, []);
 
-  const logout = useCallback(async () => {
+  const logout = useCallback(async (nextNotice?: string) => {
     await api.logout().catch(() => {});
+    setNotice(nextNotice ?? null);
     setUser(null);
   }, []);
 
-  return <AuthContext.Provider value={{ user, loading, login, logout }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ user, loading, login, logout, notice }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

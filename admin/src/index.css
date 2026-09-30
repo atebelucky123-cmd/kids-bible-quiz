@@ -537,11 +537,6 @@ th {
   justify-content: flex-end;
 }
 
-.row-chevron {
-  color: var(--text-secondary);
-  text-align: right;
-}
-
 .page-header {
   gap: 16px;
 }

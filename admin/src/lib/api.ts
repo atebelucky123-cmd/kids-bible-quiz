@@ -32,7 +32,11 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
       },
     });
   } catch {
-    throw new ApiError('Could not reach the API. Is the server running?', 'NETWORK_ERROR');
+    // Usually the free-tier API waking up after being idle, not a real outage.
+    throw new ApiError(
+      'The server is waking up. Please wait a few seconds and try again.',
+      'NETWORK_ERROR'
+    );
   }
 
   if (response.status === 204) {
@@ -43,7 +47,11 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   if (!response.ok) {
     const err = body?.error ?? { message: 'Something went wrong', code: 'UNKNOWN_ERROR' };
-    throw new ApiError(err.message, err.code, err.details);
+    // "Validation failed" alone tells the admin nothing — show the actual
+    // field messages (e.g. "Password can only contain letters and numbers").
+    const detailMessages: string[] = [...new Set<string>((err.details ?? []).map((d: { message: string }) => d.message))];
+    const message = detailMessages.length > 0 ? detailMessages.join(' ') : err.message;
+    throw new ApiError(message, err.code, err.details);
   }
 
   return body as T;

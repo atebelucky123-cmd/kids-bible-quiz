@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { PasswordInput } from '../components/PasswordInput';
 
 export function Login() {
-  const { user, login } = useAuth();
+  const { user, login, notice } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [firstName, setFirstName] = useState('');
@@ -58,6 +58,7 @@ export function Login() {
           />
         </div>
 
+        {notice && !error && <p style={{ color: '#4d6600', fontSize: 13 }}>{notice}</p>}
         {error && <p className="error-text">{error}</p>}
 
         <button type="submit" className="btn btn-primary" disabled={submitting}>

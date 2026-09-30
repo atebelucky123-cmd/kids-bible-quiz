@@ -56,7 +56,6 @@ export function Quizzes() {
                   <th>Questions</th>
                   <th>Time Limit</th>
                   <th>Status</th>
-                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -81,7 +80,6 @@ export function Quizzes() {
                         {q.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
-                    <td className="row-chevron">›</td>
                   </tr>
                 ))}
               </tbody>

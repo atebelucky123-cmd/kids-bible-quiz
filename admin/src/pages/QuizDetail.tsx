@@ -96,7 +96,7 @@ export function QuizDetail() {
   return (
     <div>
       <button type="button" className="btn btn-ghost" style={{ paddingLeft: 0 }} onClick={() => navigate('/quizzes')}>
-        ← All Quizzes
+        All Quizzes
       </button>
 
       <div className="page-header" style={{ marginTop: 4 }}>
