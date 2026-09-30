@@ -162,7 +162,41 @@ export type QuizAttemptState = {
 
 export type CurrentQuestionResponse = QuizAttemptState & {
   secondsRemaining: number;
+  // atEnd: every question has been reached but some skipped ones are still
+  // open, so there's no current question — the app offers going back to
+  // them or finishing. question is null then.
+  atEnd: boolean;
+  openSkipped: number;
+  firstOpenPosition: number | null;
+  question: PublicQuestion | null;
+};
+
+// An earlier question, reached with the Previous button.
+//   DONE   — answered correctly; read-only, answer shown
+//   CLOSED — its timer ran out; read-only, answer shown
+//   OPEN   — skipped; can still be answered, on its own timer
+export type PastQuestionState = 'DONE' | 'CLOSED' | 'OPEN';
+
+export type PastQuestion = {
+  position: number;
+  totalQuestions: number;
+  currentQuestionIndex: number;
+  state: PastQuestionState;
   question: PublicQuestion;
+  correctOption: AnswerOption | null;
+  secondsRemaining: number | null;
+  // The current question's clock keeps running while looking back. Null
+  // when it hasn't been shown yet.
+  currentSecondsRemaining: number | null;
+};
+
+export type PastAnswerResult = {
+  correct: boolean;
+  earnedStar: boolean;
+  message: string;
+  isQuizComplete: boolean;
+  score: number;
+  secondsRemaining: number | null;
 };
 
 export type AnswerOption = 'A' | 'B' | 'C' | 'D';
@@ -180,9 +214,9 @@ export type AnswerResult = {
 };
 
 export type SkipResult = {
-  // The question is over, so the server reveals its answer — shown after a
-  // timeout so the child still learns it.
-  correctOption: AnswerOption;
+  // Only sent after a timeout, when the question is closed for good. A plain
+  // skip keeps it hidden, since it can still be answered later.
+  correctOption: AnswerOption | null;
   attempt: QuizAttemptState;
   isQuizComplete: boolean;
   score: number;
@@ -273,12 +307,30 @@ export const api = {
     });
   },
 
-  // Also called automatically when a question's timer runs out.
-  async skipQuestion(attemptId: number, questionId: number) {
+  // Also called automatically (timedOut) when a question's timer runs out.
+  async skipQuestion(attemptId: number, questionId: number, timedOut = false) {
     return request<SkipResult>(`/api/quiz/${attemptId}/skip`, {
       method: 'POST',
-      body: JSON.stringify({ questionId }),
+      body: JSON.stringify({ questionId, timedOut }),
     });
+  },
+
+  async getPastQuestion(attemptId: number, position: number) {
+    return request<PastQuestion>(`/api/quiz/${attemptId}/questions/${position}`);
+  },
+
+  async answerPastQuestion(attemptId: number, position: number, selectedOption: AnswerOption) {
+    return request<PastAnswerResult>(`/api/quiz/${attemptId}/questions/${position}/answer`, {
+      method: 'POST',
+      body: JSON.stringify({ selectedOption }),
+    });
+  },
+
+  async timeoutPastQuestion(attemptId: number, position: number) {
+    return request<{ correctOption: AnswerOption; isQuizComplete: boolean }>(
+      `/api/quiz/${attemptId}/questions/${position}/timeout`,
+      { method: 'POST' }
+    );
   },
 
   async quitQuiz(attemptId: number) {

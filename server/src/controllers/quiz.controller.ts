@@ -7,6 +7,9 @@ import {
   getResult,
   skipQuestion,
   quitQuiz,
+  getPastQuestion,
+  answerPastQuestion,
+  timeoutPastQuestion,
   listAvailableQuizzes,
 } from "../services/quiz.service";
 
@@ -62,8 +65,8 @@ export async function result(req: Request, res: Response, next: NextFunction) {
 export async function skip(req: Request, res: Response, next: NextFunction) {
   try {
     const attemptId = Number(req.params.attemptId);
-    const { questionId } = req.body as { questionId: number };
-    res.json(await skipQuestion(req.user!.userId, attemptId, questionId));
+    const { questionId, timedOut } = req.body as { questionId: number; timedOut: boolean };
+    res.json(await skipQuestion(req.user!.userId, attemptId, questionId, timedOut));
   } catch (err) {
     next(err);
   }
@@ -73,6 +76,39 @@ export async function quit(req: Request, res: Response, next: NextFunction) {
   try {
     const attemptId = Number(req.params.attemptId);
     res.json(await quitQuiz(req.user!.userId, attemptId));
+  } catch (err) {
+    next(err);
+  }
+}
+
+// Earlier questions, for the app's Previous button.
+function pastParams(req: Request) {
+  return { attemptId: Number(req.params.attemptId), position: Number(req.params.position) };
+}
+
+export async function pastQuestion(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { attemptId, position } = pastParams(req);
+    res.json(await getPastQuestion(req.user!.userId, attemptId, position));
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function answerPast(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { attemptId, position } = pastParams(req);
+    const { selectedOption } = req.body as { selectedOption: AnswerOption };
+    res.json(await answerPastQuestion(req.user!.userId, attemptId, position, selectedOption));
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function timeoutPast(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { attemptId, position } = pastParams(req);
+    res.json(await timeoutPastQuestion(req.user!.userId, attemptId, position));
   } catch (err) {
     next(err);
   }

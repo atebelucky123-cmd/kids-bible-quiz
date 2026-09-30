@@ -17,4 +17,12 @@ export const submitAnswerSchema = z.object({
 
 export const skipQuestionSchema = z.object({
   questionId: z.coerce.number().int().positive(),
+  // True when the app is reporting the question's timer running out,
+  // rather than the student tapping Skip.
+  timedOut: z.boolean().optional().default(false),
+});
+
+export const pastQuestionParamsSchema = z.object({
+  attemptId: z.coerce.number().int().positive(),
+  position: z.coerce.number().int().min(0),
 });

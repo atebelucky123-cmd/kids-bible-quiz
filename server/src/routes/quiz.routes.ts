@@ -6,8 +6,20 @@ import {
   attemptParamsSchema,
   submitAnswerSchema,
   skipQuestionSchema,
+  pastQuestionParamsSchema,
 } from "../validators/quiz.validators";
-import { start, getQuestion, answer, skip, quit, result, availableQuizzes } from "../controllers/quiz.controller";
+import {
+  start,
+  getQuestion,
+  answer,
+  skip,
+  quit,
+  result,
+  availableQuizzes,
+  pastQuestion,
+  answerPast,
+  timeoutPast,
+} from "../controllers/quiz.controller";
 
 export const quizRouter = Router();
 
@@ -27,6 +39,25 @@ quizRouter.post(
   requireAuth,
   validate({ params: attemptParamsSchema, body: skipQuestionSchema }),
   skip
+);
+// Earlier questions (the app's Previous button), addressed by position in the quiz.
+quizRouter.get(
+  "/:attemptId/questions/:position",
+  requireAuth,
+  validate({ params: pastQuestionParamsSchema }),
+  pastQuestion
+);
+quizRouter.post(
+  "/:attemptId/questions/:position/answer",
+  requireAuth,
+  validate({ params: pastQuestionParamsSchema, body: submitAnswerSchema }),
+  answerPast
+);
+quizRouter.post(
+  "/:attemptId/questions/:position/timeout",
+  requireAuth,
+  validate({ params: pastQuestionParamsSchema }),
+  timeoutPast
 );
 quizRouter.post("/:attemptId/quit", requireAuth, validate({ params: attemptParamsSchema }), quit);
 // No POST /complete — answering, skipping or quitting already finalizes the

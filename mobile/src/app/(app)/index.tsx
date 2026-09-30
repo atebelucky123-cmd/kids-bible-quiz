@@ -48,7 +48,10 @@ export default function HomeScreen() {
   // shows "Time's up" with the answer and moves on, so resuming is always
   // possible. The badge still says when the saved question has expired.
   const canContinue = !!inProgressAttempt;
-  const savedExpired = !!inProgressAttempt && inProgressAttempt.secondsRemaining <= 0;
+  const savedExpired =
+    !!inProgressAttempt &&
+    inProgressAttempt.currentQuestionIndex < inProgressAttempt.totalQuestions &&
+    inProgressAttempt.secondsRemaining <= 0;
 
   return (
     <View style={styles.container}>
@@ -66,7 +69,9 @@ export default function HomeScreen() {
             <View style={[styles.savedCard, savedExpired && styles.savedCardExpired]}>
               <Text style={styles.savedBadge}>{savedExpired ? "SAVED · TIME'S UP" : 'SAVED'}</Text>
               <Text style={styles.savedText}>
-                Question {inProgressAttempt.currentQuestionIndex + 1} of {inProgressAttempt.totalQuestions}
+                {inProgressAttempt.currentQuestionIndex >= inProgressAttempt.totalQuestions
+                  ? "Skipped questions left to try"
+                  : `Question ${inProgressAttempt.currentQuestionIndex + 1} of ${inProgressAttempt.totalQuestions}`}
               </Text>
             </View>
           ) : null}

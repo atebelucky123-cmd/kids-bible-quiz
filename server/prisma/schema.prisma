@@ -117,6 +117,10 @@ model QuizAttempt {
   // hasn't been fetched yet, so time spent on a "Well done" or "Time's up"
   // screen never eats into the next question.
   questionShownAt      DateTime?     @map("question_shown_at")
+  // A skipped question the student has gone back to answer, and when they
+  // opened it — it gets its own timer, separate from the current question's.
+  revisitQuestionId    Int?          @map("revisit_question_id")
+  revisitShownAt       DateTime?     @map("revisit_shown_at")
   completedAt          DateTime?     @map("completed_at")
   createdAt            DateTime      @default(now()) @map("created_at")
   updatedAt            DateTime      @updatedAt @map("updated_at")
@@ -140,6 +144,9 @@ model Answer {
   // option was picked. Recorded anyway so the result review can show it.
   selectedOption AnswerOption? @map("selected_option")
   isCorrect      Boolean      @map("is_correct")
+  // A null-answer row is either a skip (can be revisited and answered) or
+  // the timer running out (closed for good — its answer has been shown).
+  timedOut       Boolean      @default(false) @map("timed_out")
   answeredAt     DateTime     @default(now()) @map("answered_at")
 
   attempt  QuizAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
