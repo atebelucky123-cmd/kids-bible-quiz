@@ -5,6 +5,8 @@ import {
   getCurrentQuestion,
   submitAnswer,
   getResult,
+  skipQuestion,
+  quitQuiz,
   listAvailableQuizzes,
 } from "../services/quiz.service";
 
@@ -52,6 +54,25 @@ export async function result(req: Request, res: Response, next: NextFunction) {
     const attemptId = Number(req.params.attemptId);
     const data = await getResult(req.user!.userId, attemptId);
     res.json(data);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function skip(req: Request, res: Response, next: NextFunction) {
+  try {
+    const attemptId = Number(req.params.attemptId);
+    const { questionId } = req.body as { questionId: number };
+    res.json(await skipQuestion(req.user!.userId, attemptId, questionId));
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function quit(req: Request, res: Response, next: NextFunction) {
+  try {
+    const attemptId = Number(req.params.attemptId);
+    res.json(await quitQuiz(req.user!.userId, attemptId));
   } catch (err) {
     next(err);
   }

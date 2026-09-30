@@ -14,3 +14,7 @@ export const attemptParamsSchema = z.object({
 export const submitAnswerSchema = z.object({
   selectedOption: z.enum(["A", "B", "C", "D"]),
 });
+
+export const skipQuestionSchema = z.object({
+  questionId: z.coerce.number().int().positive(),
+});

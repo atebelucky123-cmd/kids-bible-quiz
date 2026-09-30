@@ -44,11 +44,11 @@ export default function HomeScreen() {
   }
 
   const { inProgressAttempt, stats } = state.summary;
-  // Resuming a question whose timer already ran out is a dead end — there's
-  // no way to submit an answer to it (Phase 7/8's expired-question guard),
-  // so Continue Quiz would just take the student to a frozen screen. Only
-  // offer starting fresh in that case.
-  const canContinue = !!inProgressAttempt && inProgressAttempt.secondsRemaining > 0;
+  // A question whose timer ran out is no longer a dead end: reopening it
+  // shows "Time's up" with the answer and moves on, so resuming is always
+  // possible. The badge still says when the saved question has expired.
+  const canContinue = !!inProgressAttempt;
+  const savedExpired = !!inProgressAttempt && inProgressAttempt.secondsRemaining <= 0;
 
   return (
     <View style={styles.container}>
@@ -63,8 +63,8 @@ export default function HomeScreen() {
           </View>
 
           {inProgressAttempt ? (
-            <View style={[styles.savedCard, !canContinue && styles.savedCardExpired]}>
-              <Text style={styles.savedBadge}>{canContinue ? 'SAVED' : "TIME'S UP"}</Text>
+            <View style={[styles.savedCard, savedExpired && styles.savedCardExpired]}>
+              <Text style={styles.savedBadge}>{savedExpired ? "SAVED · TIME'S UP" : 'SAVED'}</Text>
               <Text style={styles.savedText}>
                 Question {inProgressAttempt.currentQuestionIndex + 1} of {inProgressAttempt.totalQuestions}
               </Text>

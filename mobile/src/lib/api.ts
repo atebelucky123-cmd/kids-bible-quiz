@@ -169,11 +169,38 @@ export type AnswerOption = 'A' | 'B' | 'C' | 'D';
 
 export type AnswerResult = {
   correct: boolean;
+  // Only a right *first* answer scores a point and a star; a right answer
+  // after retries still moves on, but earns nothing.
+  earnedStar: boolean;
   message: string;
   attempt: QuizAttemptState;
   isQuizComplete: boolean;
   score: number;
   secondsRemaining: number | null;
+};
+
+export type SkipResult = {
+  // The question is over, so the server reveals its answer — shown after a
+  // timeout so the child still learns it.
+  correctOption: AnswerOption;
+  attempt: QuizAttemptState;
+  isQuizComplete: boolean;
+  score: number;
+};
+
+export type ReviewOutcome = 'CORRECT' | 'CORRECT_AFTER_RETRY' | 'MISSED' | 'NOT_ANSWERED';
+
+export type ReviewItem = {
+  questionId: number;
+  questionText: string;
+  optionA: string;
+  optionB: string;
+  optionC: string;
+  optionD: string;
+  correctOption: AnswerOption;
+  // The child's first pick; null if they skipped, ran out of time, or quit first.
+  firstAnswer: AnswerOption | null;
+  outcome: ReviewOutcome;
 };
 
 export type QuizResult = {
@@ -185,6 +212,7 @@ export type QuizResult = {
   // Decided server-side against the raw (unrounded) percentage — never
   // recompute this threshold from a rounded display value on the client.
   playCheers: boolean;
+  review: ReviewItem[];
 };
 
 export const api = {
@@ -243,6 +271,18 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ selectedOption }),
     });
+  },
+
+  // Also called automatically when a question's timer runs out.
+  async skipQuestion(attemptId: number, questionId: number) {
+    return request<SkipResult>(`/api/quiz/${attemptId}/skip`, {
+      method: 'POST',
+      body: JSON.stringify({ questionId }),
+    });
+  },
+
+  async quitQuiz(attemptId: number) {
+    return request<QuizAttemptState>(`/api/quiz/${attemptId}/quit`, { method: 'POST' });
   },
 
   async getQuizResult(attemptId: number) {

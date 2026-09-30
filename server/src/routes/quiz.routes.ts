@@ -1,8 +1,13 @@
 import { Router } from "express";
 import { validate } from "../middleware/validate";
 import { requireAuth } from "../middleware/requireAuth";
-import { startQuizSchema, attemptParamsSchema, submitAnswerSchema } from "../validators/quiz.validators";
-import { start, getQuestion, answer, result, availableQuizzes } from "../controllers/quiz.controller";
+import {
+  startQuizSchema,
+  attemptParamsSchema,
+  submitAnswerSchema,
+  skipQuestionSchema,
+} from "../validators/quiz.validators";
+import { start, getQuestion, answer, skip, quit, result, availableQuizzes } from "../controllers/quiz.controller";
 
 export const quizRouter = Router();
 
@@ -16,6 +21,14 @@ quizRouter.post(
   validate({ params: attemptParamsSchema, body: submitAnswerSchema }),
   answer
 );
-// No POST /complete — see the comment above getResult() in quiz.service.ts
-// for why finalizing already happens inside submitAnswer.
+// Also used when a question's timer runs out.
+quizRouter.post(
+  "/:attemptId/skip",
+  requireAuth,
+  validate({ params: attemptParamsSchema, body: skipQuestionSchema }),
+  skip
+);
+quizRouter.post("/:attemptId/quit", requireAuth, validate({ params: attemptParamsSchema }), quit);
+// No POST /complete — answering, skipping or quitting already finalizes the
+// attempt (see the comment above getResult() in quiz.service.ts).
 quizRouter.get("/:attemptId/result", requireAuth, validate({ params: attemptParamsSchema }), result);

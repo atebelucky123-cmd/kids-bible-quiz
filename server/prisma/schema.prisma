@@ -112,6 +112,11 @@ model QuizAttempt {
   timeLimitSeconds     Int           @map("time_limit_seconds")
   startedAt            DateTime      @default(now()) @map("started_at")
   lastActivityAt       DateTime      @default(now()) @updatedAt @map("last_activity_at")
+  // When the current question was first shown to the student — its timer
+  // counts from here. Null means the quiz has moved on to a question that
+  // hasn't been fetched yet, so time spent on a "Well done" or "Time's up"
+  // screen never eats into the next question.
+  questionShownAt      DateTime?     @map("question_shown_at")
   completedAt          DateTime?     @map("completed_at")
   createdAt            DateTime      @default(now()) @map("created_at")
   updatedAt            DateTime      @updatedAt @map("updated_at")
@@ -131,7 +136,9 @@ model Answer {
   id             Int          @id @default(autoincrement())
   attemptId      Int          @map("attempt_id")
   questionId     Int          @map("question_id")
-  selectedOption AnswerOption @map("selected_option")
+  // Null = the student skipped the question or its timer ran out, so no
+  // option was picked. Recorded anyway so the result review can show it.
+  selectedOption AnswerOption? @map("selected_option")
   isCorrect      Boolean      @map("is_correct")
   answeredAt     DateTime     @default(now()) @map("answered_at")
 

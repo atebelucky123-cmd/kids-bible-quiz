@@ -17,6 +17,7 @@ export async function getAttemptsSummary(userId: number) {
       currentQuestionIndex: true,
       timeLimitSeconds: true,
       lastActivityAt: true,
+      questionShownAt: true,
       startedAt: true,
       completedAt: true,
       quiz: { select: { title: true } },

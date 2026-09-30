@@ -1,13 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CorrectAnswerOverlay, WrongAnswerBanner } from '@/components/ui/answer-feedback';
 import { Button } from '@/components/ui/button';
 import { Timer } from '@/components/ui/timer';
 import { Brand, Spacing } from '@/constants/theme';
-import { useCountdown } from '@/hooks/use-countdown';
+import { useCountdown, type CountdownStart } from '@/hooks/use-countdown';
 import { useCurrentQuestion } from '@/hooks/use-current-question';
 import { api, ApiError, type AnswerOption } from '@/lib/api';
 
@@ -17,6 +17,10 @@ function goToResult(attemptId: string) {
   router.replace({ pathname: '/quiz/result/[attemptId]', params: { attemptId } });
 }
 
+// Set once a question's timer runs out: the server has already moved the
+// quiz on, and revealed this question's answer so it can be shown.
+type TimeUpState = { correctOption: AnswerOption; isQuizComplete: boolean };
+
 export default function QuizScreen() {
   const { attemptId } = useLocalSearchParams<{ attemptId: string }>();
   const { state, reload } = useCurrentQuestion(Number(attemptId));
@@ -25,27 +29,76 @@ export default function QuizScreen() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [wrongFeedback, setWrongFeedback] = useState(false);
   const [showCorrectOverlay, setShowCorrectOverlay] = useState(false);
-  // Starts from the server's GET value and gets overridden directly after
-  // a wrong-answer submission (which resets the retry window server-side)
-  // — see handleSelect below.
-  const [secondsRemaining, setSecondsRemaining] = useState(0);
+  const [timeUp, setTimeUp] = useState<TimeUpState | null>(null);
+  // Starts from the server's GET value and gets replaced directly after a
+  // wrong-answer submission (which resets the retry window server-side) —
+  // see handleSelect below. Tagged with its question so a leftover zero
+  // from the previous question is never mistaken for this one running out.
+  const [timer, setTimer] = useState<CountdownStart & { questionId: number | null }>({
+    seconds: 0,
+    questionId: null,
+  });
+  // The question a timeout skip was already sent for, so the countdown
+  // sitting at zero across re-renders can't send it twice.
+  const timedOutQuestionRef = useRef<number | null>(null);
+
+  const questionId = state.status === 'ready' ? state.data.question.id : null;
 
   useEffect(() => {
     if (state.status === 'ready') {
-      setSecondsRemaining(state.data.secondsRemaining);
-    } else if (state.status === 'error' && state.code === 'ATTEMPT_COMPLETE') {
-      // Reopening the app after already finishing this attempt — the
-      // result already exists, so go straight to it instead of showing
-      // an error for a perfectly normal state.
+      setTimer({ seconds: state.data.secondsRemaining, questionId: state.data.question.id });
+    } else if (
+      state.status === 'error' &&
+      (state.code === 'ATTEMPT_COMPLETE' || state.code === 'ATTEMPT_FINISHED')
+    ) {
+      // Reopening the app after already finishing (or quitting) this
+      // attempt — the result already exists, so go straight to it instead
+      // of showing an error for a perfectly normal state.
       goToResult(attemptId);
     }
   }, [state, attemptId]);
 
-  const remaining = useCountdown(secondsRemaining);
-  const expired = remaining <= 0;
+  const remaining = useCountdown(timer);
+  const expired = questionId !== null && timer.questionId === questionId && remaining <= 0;
+  const busy = submitting || showCorrectOverlay || timeUp !== null;
+
+  async function handleTimeUp(id: number) {
+    if (timedOutQuestionRef.current === id) return;
+    timedOutQuestionRef.current = id;
+    setWrongFeedback(false);
+    setSelected(null);
+    try {
+      const result = await api.skipQuestion(Number(attemptId), id);
+      setTimeUp({ correctOption: result.correctOption, isQuizComplete: result.isQuizComplete });
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'QUESTION_CHANGED') {
+        // Already moved on (e.g. this was retried after a network blip).
+        reload();
+      } else {
+        timedOutQuestionRef.current = null;
+        setSubmitError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.');
+      }
+    }
+  }
+
+  useEffect(() => {
+    if (expired && questionId !== null && !submitting && !showCorrectOverlay && !timeUp) {
+      handleTimeUp(questionId);
+    }
+    // handleTimeUp only reads state that's already in this list.
+  }, [expired, questionId, submitting, showCorrectOverlay, timeUp]);
+
+  function resetForNextQuestion() {
+    setShowCorrectOverlay(false);
+    setTimeUp(null);
+    setSelected(null);
+    setWrongFeedback(false);
+    setSubmitError(null);
+    reload();
+  }
 
   async function handleSelect(key: AnswerOption) {
-    if (submitting || expired || showCorrectOverlay) return;
+    if (busy || expired) return;
     setSelected(key);
     setSubmitting(true);
     setSubmitError(null);
@@ -59,19 +112,68 @@ export default function QuizScreen() {
       } else {
         setWrongFeedback(true);
         setSelected(null);
-        setSecondsRemaining(result.secondsRemaining ?? 0);
+        setTimer({ seconds: result.secondsRemaining ?? 0, questionId });
       }
     } catch (err) {
-      setSubmitError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.');
+      setSelected(null);
+      if (err instanceof ApiError && err.code === 'TIME_UP' && questionId !== null) {
+        // The phone's countdown and the server's clock can disagree by a
+        // moment — the server's decision wins.
+        handleTimeUp(questionId);
+      } else {
+        setSubmitError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.');
+      }
     } finally {
       setSubmitting(false);
     }
   }
 
-  function handleNext() {
-    setShowCorrectOverlay(false);
-    setSelected(null);
-    reload();
+  async function handleSkip() {
+    if (busy || questionId === null) return;
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      const result = await api.skipQuestion(Number(attemptId), questionId);
+      if (result.isQuizComplete) {
+        goToResult(attemptId);
+      } else {
+        resetForNextQuestion();
+      }
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'QUESTION_CHANGED') {
+        resetForNextQuestion();
+      } else {
+        setSubmitError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.');
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function quit() {
+    try {
+      await api.quitQuiz(Number(attemptId));
+      goToResult(attemptId);
+    } catch (err) {
+      setSubmitError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.');
+    }
+  }
+
+  function handleQuit() {
+    const title = 'Quit this quiz?';
+    const message = "You'll see your score so far. Questions you didn't reach won't count.";
+    // React Native's Alert does nothing on web, where the app is previewed
+    // during development.
+    if (Platform.OS === 'web') {
+      if (window.confirm(`${title}
+
+${message}`)) quit();
+      return;
+    }
+    Alert.alert(title, message, [
+      { text: 'Keep Playing', style: 'cancel' },
+      { text: 'Quit', style: 'destructive', onPress: quit },
+    ]);
   }
 
   if (state.status === 'loading') {
@@ -99,7 +201,7 @@ export default function QuizScreen() {
   }
 
   const { question, currentQuestionIndex, totalQuestions } = state.data;
-  const optionsDisabled = expired || submitting;
+  const optionsDisabled = expired || busy;
   const options: Record<AnswerOption, string> = {
     A: question.optionA,
     B: question.optionB,
@@ -128,36 +230,58 @@ export default function QuizScreen() {
           <Text style={styles.questionText}>{question.questionText}</Text>
 
           <View style={styles.options}>
-            {OPTION_KEYS.map((key) => (
-              <Pressable
-                key={key}
-                disabled={optionsDisabled}
-                onPress={() => handleSelect(key)}
-                style={[
-                  styles.option,
-                  selected === key && styles.optionSelected,
-                  optionsDisabled && styles.optionDisabled,
-                ]}>
-                <Text style={[styles.optionText, selected === key && styles.optionTextSelected]}>
-                  {options[key]}
-                </Text>
-              </Pressable>
-            ))}
+            {OPTION_KEYS.map((key) => {
+              const isRevealed = timeUp?.correctOption === key;
+              return (
+                <Pressable
+                  key={key}
+                  disabled={optionsDisabled}
+                  onPress={() => handleSelect(key)}
+                  style={[
+                    styles.option,
+                    selected === key && styles.optionSelected,
+                    optionsDisabled && !isRevealed && styles.optionDisabled,
+                    isRevealed && styles.optionRevealed,
+                  ]}>
+                  <Text style={[styles.optionText, selected === key && styles.optionTextSelected]}>
+                    {options[key]}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </View>
 
-          {wrongFeedback ? (
+          {timeUp ? (
+            <View style={styles.timeUpBox}>
+              <Text style={styles.expiredText}>Time&apos;s up! The right answer is highlighted in green.</Text>
+              <Button
+                title={timeUp.isQuizComplete ? 'See My Results' : 'Next Question'}
+                variant="primary"
+                onPress={() => (timeUp.isQuizComplete ? goToResult(attemptId) : resetForNextQuestion())}
+              />
+            </View>
+          ) : wrongFeedback ? (
             <WrongAnswerBanner />
           ) : expired ? (
-            <Text style={styles.expiredText}>Time&apos;s up! Answering is wired up in the next phase.</Text>
+            <Text style={styles.expiredText}>Time&apos;s up!</Text>
           ) : (
             <Text style={styles.hint}>Tap the answer you think is right.</Text>
           )}
 
           {submitError ? <Text style={styles.expiredText}>{submitError}</Text> : null}
+
+          {!timeUp ? (
+            <View style={styles.footer}>
+              <Button title="Skip Question" variant="outline" onPress={handleSkip} disabled={busy || expired} />
+              <Text style={styles.quitLink} onPress={handleQuit}>
+                Quit Quiz
+              </Text>
+            </View>
+          ) : null}
         </ScrollView>
       </SafeAreaView>
 
-      {showCorrectOverlay ? <CorrectAnswerOverlay onNext={handleNext} /> : null}
+      {showCorrectOverlay ? <CorrectAnswerOverlay onNext={resetForNextQuestion} /> : null}
     </View>
   );
 }
@@ -183,8 +307,12 @@ const styles = StyleSheet.create({
   },
   optionSelected: { backgroundColor: Brand.cobalt },
   optionDisabled: { opacity: 0.5 },
+  optionRevealed: { backgroundColor: Brand.lime, borderWidth: 3 },
   optionText: { fontSize: 16, fontWeight: '700', color: Brand.ink, textAlign: 'center' },
   optionTextSelected: { color: Brand.white },
   hint: { fontSize: 13, color: Brand.cobalt, textAlign: 'center' },
   expiredText: { fontSize: 14, fontWeight: '700', color: '#c0392b', textAlign: 'center' },
+  timeUpBox: { gap: 12 },
+  footer: { gap: 14, marginTop: Spacing.two, alignItems: 'stretch' },
+  quitLink: { fontSize: 14, fontWeight: '700', color: '#c0392b', textAlign: 'center', paddingVertical: 4 },
 });
