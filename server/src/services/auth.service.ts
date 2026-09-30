@@ -59,7 +59,11 @@ export async function loginUser(input: z.infer<typeof loginSchema>) {
   // real identity. Check the password against every user with this first
   // name rather than assuming the first match is the right one.
   const candidates = await prisma.user.findMany({
-    where: { firstName: { equals: input.firstName, mode: "insensitive" } },
+    where: {
+      firstName: { equals: input.firstName, mode: "insensitive" },
+      ...(input.role && { role: input.role }),
+    },
+    orderBy: { id: "asc" },
   });
 
   for (const candidate of candidates) {

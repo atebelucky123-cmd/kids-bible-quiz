@@ -159,7 +159,8 @@ export const api = {
   async login(input: { firstName: string; password: string }) {
     const data = await request<{ user: AdminUser }>('/api/auth/login', {
       method: 'POST',
-      body: JSON.stringify(input),
+      // Only match admin accounts — a student may share the same first name.
+      body: JSON.stringify({ ...input, role: 'ADMIN' }),
     });
     return data.user;
   },

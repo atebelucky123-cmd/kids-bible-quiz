@@ -25,12 +25,8 @@ export async function getAttemptsSummary(userId: number) {
   });
 
   const inProgressRow = attempts.find((attempt) => attempt.status === "IN_PROGRESS") ?? null;
-  // The client's own timer stub (development plan Appendix A) leaves what
-  // happens on expiry undecided, but the Home screen still needs to know
-  // whether resuming is actually possible — the current question can't be
-  // answered once its timer has run out, so Continue Quiz would just be a
-  // dead end. secondsRemaining lets the Home screen fall back to
-  // Start-a-New-Quiz-only in that case, per feedback from on-device testing.
+  // secondsRemaining lets the Home screen mark a saved question whose timer
+  // has already run out (resuming then shows "Time's up" and moves on).
   const inProgressAttempt = inProgressRow
     ? { ...inProgressRow, secondsRemaining: secondsRemainingFor(inProgressRow) }
     : null;

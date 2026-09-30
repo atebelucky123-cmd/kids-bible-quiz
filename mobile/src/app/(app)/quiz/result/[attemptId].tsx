@@ -49,16 +49,18 @@ export default function ResultScreen() {
   const { attemptId } = useLocalSearchParams<{ attemptId: string }>();
   const { user } = useAuth();
   const { state } = useQuizResult(Number(attemptId));
-  const cheersPlayer = useCheersSound();
+  const cheers = useCheersSound();
   const hasPlayedRef = useRef(false);
 
   useEffect(() => {
-    if (state.status === 'ready' && state.data.playCheers && !hasPlayedRef.current) {
+    // Wait until the sound is fully loaded: calling play() while it's still
+    // arriving is what made it start late and stutter.
+    if (state.status === 'ready' && state.data.playCheers && cheers.isLoaded && !hasPlayedRef.current) {
       hasPlayedRef.current = true;
-      cheersPlayer.seekTo(0);
-      cheersPlayer.play();
+      cheers.player.seekTo(0);
+      cheers.player.play();
     }
-  }, [state, cheersPlayer]);
+  }, [state, cheers.isLoaded, cheers.player]);
 
   // "Play Again" no longer restarts the same quiz directly — a finished
   // attempt always sends the student back to the quiz picker, passing

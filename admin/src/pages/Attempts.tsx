@@ -14,13 +14,25 @@ export function Attempts() {
   const [search, setSearch] = useState('');
 
   useEffect(() => {
+    // Ignore a response that arrives after the filter has changed again, so
+    // a slow earlier search can't overwrite a newer one.
+    let stale = false;
     const timeout = setTimeout(() => {
       api
         .listAttempts({ status: status === 'ALL' ? undefined : status, search: search || undefined })
-        .then(setAttempts)
-        .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load'));
+        .then((result) => {
+          if (stale) return;
+          setError(null);
+          setAttempts(result);
+        })
+        .catch((err) => {
+          if (!stale) setError(err instanceof Error ? err.message : 'Failed to load');
+        });
     }, 200);
-    return () => clearTimeout(timeout);
+    return () => {
+      stale = true;
+      clearTimeout(timeout);
+    };
   }, [status, search]);
 
   return (

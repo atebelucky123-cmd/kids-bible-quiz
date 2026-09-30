@@ -22,7 +22,7 @@ export function Overview() {
       <div className="page-header">
         <div>
           <h1>Overview</h1>
-          <p>A snapshot of the question bank and student activity.</p>
+          <p>A snapshot of your quizzes and student activity.</p>
         </div>
       </div>
 
@@ -56,7 +56,7 @@ export function Overview() {
       <div className="card">
         <h2 style={{ marginTop: 0 }}>Attempts by age band</h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: 13, marginTop: -6 }}>
-          A display grouping for reporting only — questions themselves keep a freeform age range.
+          Quiz attempts grouped by the student’s age.
         </p>
         {data.ageBandBreakdown.map((band) => (
           <div className="age-band-row" key={band.band}>

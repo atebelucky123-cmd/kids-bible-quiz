@@ -11,6 +11,7 @@ import { PastQuestionView } from '@/components/ui/past-question';
 import { Timer } from '@/components/ui/timer';
 import { Brand, Spacing } from '@/constants/theme';
 import { useCountdown, type CountdownStart } from '@/hooks/use-countdown';
+import { preloadCheersSound } from '@/hooks/use-cheers-sound';
 import { useCurrentQuestion } from '@/hooks/use-current-question';
 import { api, ApiError, type AnswerOption } from '@/lib/api';
 
@@ -66,6 +67,11 @@ export default function QuizScreen() {
   const currentQuestion = state.status === 'ready' ? state.data.question : null;
   const questionId = currentQuestion?.id ?? null;
   const showCorrectOverlay = correctOverlayNext !== null;
+
+  // Start fetching the result screen's cheers sound while the quiz is played.
+  useEffect(() => {
+    preloadCheersSound();
+  }, []);
 
   useEffect(() => {
     if (state.status === 'ready' && state.data.question) {
@@ -299,24 +305,15 @@ export default function QuizScreen() {
 
         {!timeUp ? (
           <View style={styles.footer}>
-            <View style={styles.footerRow}>
-              {canGoBack ? (
-                <Button
-                  title="Previous"
-                  variant="outline"
-                  onPress={() => setViewing(currentQuestionIndex - 1)}
-                  disabled={busy}
-                  style={styles.footerButton}
-                />
-              ) : null}
+            <Button title="Skip Question" variant="primary" onPress={handleSkip} disabled={busy || expired} />
+            {canGoBack ? (
               <Button
-                title="Skip Question"
-                variant="outline"
-                onPress={handleSkip}
-                disabled={busy || expired}
-                style={styles.footerButton}
+                title="Previous Question"
+                variant="primary"
+                onPress={() => setViewing(currentQuestionIndex - 1)}
+                disabled={busy}
               />
-            </View>
+            ) : null}
             <Text style={styles.quitLink} onPress={handleQuit}>
               Quit Quiz
             </Text>
@@ -381,8 +378,6 @@ const styles = StyleSheet.create({
   expiredText: { fontSize: 14, fontWeight: '700', color: '#c0392b', textAlign: 'center' },
   timeUpBox: { gap: 12 },
   footer: { gap: 14, marginTop: Spacing.two },
-  footerRow: { flexDirection: 'row', gap: 12 },
-  footerButton: { flex: 1 },
   quitLink: { fontSize: 14, fontWeight: '700', color: '#c0392b', textAlign: 'center', paddingVertical: 4 },
   endBox: { alignItems: 'stretch', gap: 16, paddingTop: Spacing.four },
   endMascot: { alignItems: 'center' },

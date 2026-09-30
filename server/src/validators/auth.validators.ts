@@ -31,4 +31,9 @@ export const registerSchema = z.object({
 export const loginSchema = z.object({
   firstName: z.string().trim().min(1, "First name is required"),
   password: z.string().min(1, "Password is required"),
+  // Which kind of account this app signs in: the admin dashboard sends
+  // ADMIN, the kids' app sends STUDENT. First names aren't unique, so
+  // without it an admin and a student sharing a first name and password
+  // could be signed in to each other's app. Optional for older app builds.
+  role: z.enum(["ADMIN", "STUDENT"]).optional(),
 });

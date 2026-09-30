@@ -35,7 +35,7 @@ export function Login() {
     <div className="login-page">
       <form className="login-card" onSubmit={handleSubmit}>
         <h1>Admin Dashboard</h1>
-        <p>Kids Bible Quiz — question bank &amp; student management</p>
+        <p>Kids Bible Quiz — quizzes &amp; student management</p>
 
         <div className="field">
           <label htmlFor="firstName">First name</label>

@@ -262,7 +262,8 @@ export const api = {
   async login(input: LoginInput) {
     const data = await request<{ user: PublicUser; token: string }>('/api/auth/login', {
       method: 'POST',
-      body: JSON.stringify(input),
+      // Only match student accounts — the admin may share the same first name.
+      body: JSON.stringify({ ...input, role: 'STUDENT' }),
     });
     await setToken(data.token);
     return data.user;

@@ -59,7 +59,8 @@ function finishedFields(score: number, totalQuestions: number) {
   return {
     status: "FINISHED" as const,
     completedAt: new Date(),
-    percentage: (score / totalQuestions) * 100,
+    // 0 only if every question was deleted mid-quiz (see resolveCurrentQuestion).
+    percentage: totalQuestions === 0 ? 0 : (score / totalQuestions) * 100,
   };
 }
 
@@ -78,18 +79,36 @@ async function loadInProgressAttempt(userId: number, attemptId: number) {
   return attempt;
 }
 
+type AttemptRow = NonNullable<Awaited<ReturnType<typeof prisma.quizAttempt.findUnique>>>;
+
+// The attempt's current question. The admin can delete a question nobody
+// has answered yet — including one waiting further along in a quiz a child
+// is partway through. Rather than leave that quiz stuck, drop the deleted
+// question from the attempt so it carries on and doesn't count against the
+// score. (Answered, skipped or timed-out questions can't be deleted: their
+// answer rows block it.)
+async function resolveCurrentQuestion(attempt: AttemptRow) {
+  let current = attempt;
+  while (current.currentQuestionIndex < current.questionIds.length) {
+    const question = await prisma.question.findUnique({
+      where: { id: current.questionIds[current.currentQuestionIndex] },
+    });
+    if (question) return { attempt: current, question };
+    const questionIds = current.questionIds.filter((_, i) => i !== current.currentQuestionIndex);
+    current = await prisma.quizAttempt.update({
+      where: { id: current.id },
+      data: { questionIds, totalQuestions: questionIds.length, questionShownAt: null },
+    });
+  }
+  return { attempt: current, question: null };
+}
+
 // As above, plus its current question. Answering and skipping the current
 // question start with these checks.
 async function loadActiveAttempt(userId: number, attemptId: number) {
-  const attempt = await loadInProgressAttempt(userId, attemptId);
-  if (attempt.currentQuestionIndex >= attempt.questionIds.length) {
-    throw new AppError("This quiz has no more questions", 409, "ATTEMPT_COMPLETE");
-  }
-
-  const questionId = attempt.questionIds[attempt.currentQuestionIndex];
-  const question = await prisma.question.findUnique({ where: { id: questionId } });
+  const { attempt, question } = await resolveCurrentQuestion(await loadInProgressAttempt(userId, attemptId));
   if (!question) {
-    throw new AppError("That question is no longer available", 500, "QUESTION_MISSING");
+    throw new AppError("This quiz has no more questions", 409, "ATTEMPT_COMPLETE");
   }
   return { attempt, question };
 }
@@ -251,11 +270,13 @@ function earnsPoint(isCorrect: boolean, earlierAnswers: { selectedOption: Answer
 }
 
 export async function getCurrentQuestion(userId: number, attemptId: number) {
-  let attempt = await loadInProgressAttempt(userId, attemptId);
+  const resolved = await resolveCurrentQuestion(await loadInProgressAttempt(userId, attemptId));
+  let { attempt } = resolved;
+  const { question } = resolved;
 
   // Past the last question but some skipped ones are still open: the app
   // offers going back to them, or finishing.
-  if (attempt.currentQuestionIndex >= attempt.questionIds.length) {
+  if (!question) {
     const openPositions = await openSkippedPositions(attempt);
     if (openPositions.length === 0) {
       await finishIfDone(attemptId);
@@ -269,12 +290,6 @@ export async function getCurrentQuestion(userId: number, attemptId: number) {
       secondsRemaining: 0,
       question: null,
     };
-  }
-
-  const questionId = attempt.questionIds[attempt.currentQuestionIndex];
-  const question = await prisma.question.findUnique({ where: { id: questionId } });
-  if (!question) {
-    throw new AppError("That question is no longer available", 500, "QUESTION_MISSING");
   }
 
   // The question's timer starts the first time it's fetched, i.e. when the

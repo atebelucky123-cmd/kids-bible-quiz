@@ -175,15 +175,12 @@ export function PastQuestionView({
         <Button title="See My Results" variant="primary" onPress={onQuizComplete} />
       ) : (
         <View style={styles.nav}>
-          {position > 0 ? (
-            <Button title="Previous" variant="outline" onPress={onPrevious} style={styles.navButton} />
-          ) : null}
           <Button
-            title={nextIsCurrent ? 'Back to My Question' : 'Next'}
-            variant="secondary"
+            title={nextIsCurrent ? 'Back to My Question' : 'Next Question'}
+            variant="primary"
             onPress={onNext}
-            style={styles.navButton}
           />
+          {position > 0 ? <Button title="Previous Question" variant="primary" onPress={onPrevious} /> : null}
         </View>
       )}
 
@@ -201,6 +198,5 @@ const styles = StyleSheet.create({
   status: { fontSize: 14, fontWeight: '700', color: Brand.cobalt, textAlign: 'center' },
   clockNote: { fontSize: 13, color: '#a3410a', textAlign: 'center' },
   errorText: { fontSize: 14, fontWeight: '700', color: '#c0392b', textAlign: 'center' },
-  nav: { flexDirection: 'row', gap: 12 },
-  navButton: { flex: 1 },
+  nav: { gap: 14 },
 });

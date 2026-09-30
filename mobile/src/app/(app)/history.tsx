@@ -35,9 +35,11 @@ function HistoryItem({ attempt }: { attempt: QuizAttemptSummary }) {
       </View>
       <Text style={styles.itemQuizTitle}>{attempt.quiz.title}</Text>
       <Text style={styles.itemScore}>
-        {isInProgress
-          ? `Question ${attempt.currentQuestionIndex + 1} of ${attempt.totalQuestions}`
-          : `${attempt.score} of ${attempt.totalQuestions} correct`}
+        {!isInProgress
+          ? `${attempt.score} of ${attempt.totalQuestions} correct`
+          : attempt.currentQuestionIndex >= attempt.totalQuestions
+            ? 'Skipped questions left to try'
+            : `Question ${attempt.currentQuestionIndex + 1} of ${attempt.totalQuestions}`}
       </Text>
     </Pressable>
   );
