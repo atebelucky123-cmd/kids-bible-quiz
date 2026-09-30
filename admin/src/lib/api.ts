@@ -2,7 +2,13 @@
 // POST /api/auth/login (see server/src/controllers/auth.controller.ts) —
 // unlike the mobile app, a browser can depend on cookies working
 // consistently, so there's no token to store or attach here.
-const API_URL = import.meta.env.VITE_API_URL as string | undefined;
+//
+// In production the API is called on this site's own domain ("/api/..."),
+// and vercel.json forwards it to Render. Calling Render directly made the
+// session a third-party cookie, which Safari (and Firefox) block — login
+// "succeeded" but every request after it came back "not logged in". Local
+// dev still talks to the API on its own port via VITE_API_URL.
+const API_URL = import.meta.env.PROD ? '' : (import.meta.env.VITE_API_URL as string | undefined);
 
 export class ApiError extends Error {
   code: string;
@@ -17,7 +23,7 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  if (!API_URL) {
+  if (API_URL === undefined) {
     throw new ApiError('VITE_API_URL is not set — check admin/.env.', 'CONFIG_ERROR');
   }
 
